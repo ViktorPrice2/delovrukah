@@ -37,4 +37,7 @@ yarn-error.log*
 .DS_Store
 *.pem
 
+# Docker
+DockerDesktopInstaller.exe
+
 /generated/prisma
