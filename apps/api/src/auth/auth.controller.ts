@@ -1,4 +1,5 @@
-import { Body, Controller, Post } from '@nestjs/common';
+// Импортируем HttpCode и HttpStatus
+import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
 import { SigninDto } from './dto/signin.dto';
 import { SignupDto } from './dto/signup.dto';
 import { AuthService } from './auth.service';
@@ -12,6 +13,9 @@ export class AuthController {
     return this.authService.signup(dto);
   }
 
+  // --- ИЗМЕНЕНИЯ ЗДЕСЬ ---
+
+  @HttpCode(HttpStatus.OK) // <--- Добавьте эту строку
   @Post('signin')
   signin(@Body() dto: SigninDto): Promise<{ access_token: string }> {
     return this.authService.signin(dto);
