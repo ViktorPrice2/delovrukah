@@ -31,7 +31,7 @@ model ProviderProfile {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   displayName String
   description String?
-  hourlyRate  Decimal? @db.Numeric(10, 2)
+  hourlyRate  Decimal?  @db.Decimal(10, 2)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

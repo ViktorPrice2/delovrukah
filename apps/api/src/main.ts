@@ -3,6 +3,9 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.PORT ?? 3000);
+  const port = 3001; // Задаем порт в переменную
+  await app.listen(port);
+  // Вот эта строка - самая важная для нас сейчас
+  console.log(`API is running on: http://localhost:${port}`); 
 }
 bootstrap();
