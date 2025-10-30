@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/app/components/AuthProvider";
+import CitySelector from "@/app/components/CitySelector";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,10 +27,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <AuthProvider>{children}</AuthProvider>
+      <body className={`${geistSans.variable} ${geistMono.variable} bg-slate-50 antialiased`}>
+        <AuthProvider>
+          <div className="min-h-screen text-slate-900">
+            <header className="border-b bg-white/80 shadow-sm backdrop-blur">
+              <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <Link href="/" className="text-xl font-semibold">
+                  Delovrukah.ru
+                </Link>
+                <div className="w-full max-w-xs sm:max-w-sm">
+                  <CitySelector />
+                </div>
+              </div>
+            </header>
+            <main className="mx-auto w-full max-w-6xl px-4 py-8">{children}</main>
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );
