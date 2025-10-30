@@ -3,6 +3,8 @@ import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
 import { SigninDto } from './dto/signin.dto';
 import { SignupDto } from './dto/signup.dto';
 import { AuthService } from './auth.service';
+import { Get, Request, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from './jwt.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -19,5 +21,12 @@ export class AuthController {
   @Post('signin')
   signin(@Body() dto: SigninDto): Promise<{ access_token: string }> {
     return this.authService.signin(dto);
+  }
+
+  @UseGuards(JwtAuthGuard) // <--- Защищаем этот роут
+  @Get('me')
+  getProfile(@Request() req) {
+    // Стратегия JWT уже расшифровала токен и положила данные в req.user
+    return req.user;
   }
 }

@@ -1,14 +1,18 @@
+// apps/web/src/app/components/AuthForm.tsx
+
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import axios from "axios";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { jwtDecode } from "jwt-decode";
 
+import { api } from '@/lib/api';
 import { useAuthStore } from "@/app/store/auth.store";
+import { useIsClient } from '@/hooks/useIsClient'; // Убедитесь, что этот файл создан
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -25,6 +29,7 @@ const signinSchema = z.object({
 
 const signupSchema = signinSchema
   .extend({
+    // Мы ожидаем fullName, а на бэкенд отправим displayName
     fullName: z
       .string()
       .min(2, "Имя должно содержать минимум 2 символа")
@@ -45,11 +50,6 @@ type SigninValues = z.infer<typeof signinSchema>;
 type SignupValues = z.infer<typeof signupSchema>;
 type AuthFormValues = SigninValues &
   Partial<Omit<SignupValues, keyof SigninValues>>;
-
-const API_ENDPOINTS: Record<AuthMode, string> = {
-  signin: "/api/auth/signin",
-  signup: "/api/auth/signup",
-};
 
 interface AuthFormProps {
   mode: AuthMode;
@@ -72,6 +72,7 @@ export function AuthForm({
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
   const [serverError, setServerError] = useState<string | null>(null);
+  const isClient = useIsClient();
 
   const {
     register,
@@ -90,15 +91,15 @@ export function AuthForm({
   const onSubmit = handleSubmit(async (values) => {
     setServerError(null);
 
-    const endpoint = API_ENDPOINTS[mode];
-    const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL;
+    const endpoint = mode === 'signup' ? '/auth/signup' : '/auth/signin';
 
     const payload =
       mode === "signup"
         ? {
             email: values.email,
             password: values.password,
-            fullName: values.fullName?.trim(),
+            displayName: values.fullName?.trim(),
+            role: "CUSTOMER",
           }
         : {
             email: values.email,
@@ -106,45 +107,60 @@ export function AuthForm({
           };
 
     try {
-      const response = await axios.post(endpoint, payload, {
-        baseURL: baseURL && baseURL.length > 0 ? baseURL : undefined,
-      });
-      const { token, user } = response.data ?? {};
+      const response = await api.post(endpoint, payload);
+      const token = response.data?.access_token;
 
-      if (!token || !user) {
-        throw new Error("Некорректный ответ сервера");
+      if (!token) {
+        throw new Error("Некорректный ответ сервера: токен не получен.");
       }
 
-      login({ token, user, persist: true });
+      const decodedToken: { email: string; role: 'CUSTOMER' | 'PROVIDER' } = jwtDecode(token);
+
+      login({
+        token,
+        user: {
+          email: decodedToken.email,
+          role: decodedToken.role,
+        },
+      });
+      
       router.replace(redirectTo ?? "/profile");
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Ошибка аутентификации", error);
 
-      if (axios.isAxiosError(error)) {
-        const message =
-          (error.response?.data as { message?: string })?.message ??
-          "Не удалось выполнить запрос. Попробуйте снова.";
+      const message =
+        error.response?.data?.message ||
+        "Не удалось выполнить запрос. Попробуйте снова.";
+      
+      if (Array.isArray(message)) {
+        setServerError(message.join(', '));
+      } else {
         setServerError(message);
-        return;
       }
-
-      setServerError(
-        error instanceof Error
-          ? error.message
-          : "Произошла непредвиденная ошибка"
-      );
     }
   });
 
-  const title =
-    heading ?? (mode === "signup" ? "Регистрация" : "Вход в аккаунт");
-  const hint =
-    description ??
-    (mode === "signup"
-      ? "Создайте учетную запись, чтобы пользоваться сервисом"
-      : "Введите свои учетные данные");
-  const submitText =
-    submitLabel ?? (mode === "signup" ? "Зарегистрироваться" : "Войти");
+  const title = heading ?? (mode === "signup" ? "Регистрация" : "Вход в аккаунт");
+  const hint = description ?? (mode === "signup" ? "Создайте учетную запись" : "Введите свои данные");
+  const submitText = submitLabel ?? (mode === "signup" ? "Зарегистрироваться" : "Войти");
+
+  // Отложенный рендеринг для решения проблемы гидратации
+  if (!isClient) {
+    // Можно вернуть скелет-загрузчик для лучшего UX
+    return (
+      <div className="mx-auto flex w-full max-w-md flex-col gap-6 rounded-2xl border border-neutral-200 bg-white/80 p-8 shadow-sm backdrop-blur animate-pulse">
+        <div className="h-10 bg-gray-200 rounded w-3/4 mx-auto"></div>
+        <div className="h-4 bg-gray-200 rounded w-full mx-auto"></div>
+        <div className="flex flex-col gap-5 mt-5">
+            <div className="h-14 bg-gray-200 rounded-lg"></div>
+            <div className="h-14 bg-gray-200 rounded-lg"></div>
+            {mode === 'signup' && <div className="h-14 bg-gray-200 rounded-lg"></div>}
+            <div className="h-11 bg-gray-300 rounded-lg mt-1"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 rounded-2xl border border-neutral-200 bg-white/80 p-8 shadow-sm backdrop-blur">

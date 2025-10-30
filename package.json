@@ -2,6 +2,7 @@
   "name": "delovrukah",
   "private": true,
   "scripts": {
+    "postinstall": "pnpm dotenv -- pnpm prisma generate",
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
