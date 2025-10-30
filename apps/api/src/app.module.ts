@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { GeoModule } from './geo/geo.module';
+import { ProviderModule } from './provider/provider.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { GeoModule } from './geo/geo.module';
     AuthModule,
     CatalogModule,
     GeoModule,
+    ProviderModule,
   ],
   controllers: [AppController],
   providers: [AppService],
