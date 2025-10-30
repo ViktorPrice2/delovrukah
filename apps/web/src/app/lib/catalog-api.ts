@@ -1,14 +1,16 @@
 
 import type { Category, City, ServiceDetail } from "../types/catalog.types";
 
-// Получаем базовый URL API. process.env доступен только на сервере.
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+function getApiBaseUrl(): string {
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-// Проверка на наличие переменной окружения
-if (!API_BASE_URL) {
-  throw new Error(
-    "NEXT_PUBLIC_API_BASE_URL is not defined in .env.local file."
-  );
+  if (!baseUrl) {
+    throw new Error(
+      "NEXT_PUBLIC_API_BASE_URL is not defined in .env.local file."
+    );
+  }
+
+  return baseUrl;
 }
 
 /**
@@ -20,7 +22,7 @@ if (!API_BASE_URL) {
  */
 async function fetchFromApi<T>(path: string): Promise<T | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const response = await fetch(`${getApiBaseUrl()}${path}`, {
       // 'no-store' гарантирует, что мы всегда получаем свежие данные.
       // В будущем можно будет настроить более умное кэширование.
       cache: "no-store", 
@@ -56,15 +58,15 @@ export async function getCities(): Promise<City[]> {
 }
 
 export async function getCategories(citySlug: string): Promise<Category[]> {
-    const categories = await fetchFromApi<Category[]>(`/categories?citySlug=${encodeURIComponent(citySlug)}`);
-    return categories ?? [];
+  const categories = await fetchFromApi<Category[]>(`/categories?citySlug=${encodeURIComponent(citySlug)}`);
+  return categories ?? [];
 }
 
 export async function getServicesByCategory(citySlug: string, categorySlug: string): Promise<ServiceDetail[]> {
-    const services = await fetchFromApi<ServiceDetail[]>(
-        `/services?citySlug=${encodeURIComponent(citySlug)}&categorySlug=${encodeURIComponent(categorySlug)}`
-    );
-    return services ?? [];
+  const services = await fetchFromApi<ServiceDetail[]>(
+    `/services?citySlug=${encodeURIComponent(citySlug)}&categorySlug=${encodeURIComponent(categorySlug)}`
+  );
+  return services ?? [];
 }
 
 /**

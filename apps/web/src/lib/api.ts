@@ -20,7 +20,9 @@ api.interceptors.request.use(
   (config) => {
     // Мы используем Zustand, поэтому будем брать токен из него, а не напрямую из localStorage.
     // Пока оставим так, но в будущем улучшим.
-    const token = localStorage.getItem('auth-token'); 
+    const token = typeof window !== 'undefined'
+      ? localStorage.getItem('auth-token')
+      : null;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
