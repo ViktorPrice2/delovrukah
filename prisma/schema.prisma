@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["nativeDistinct"]
 }
 
 datasource db {
@@ -45,7 +46,6 @@ model ProviderProfile {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   displayName  String
   description  String?
-  hourlyRate   Decimal?  @db.Decimal(10, 2)
   cityId       String?
   city         City?     @relation(fields: [cityId], references: [id], onDelete: SetNull)
   homeLocation Unsupported("point")?
