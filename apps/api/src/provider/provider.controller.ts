@@ -13,19 +13,17 @@ import { UpsertPriceDto } from './dto/upsert-price.dto';
 
 type RequestWithUser = Request & { user: JwtPayload };
 
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.PROVIDER)
 @Controller('provider')
 export class ProviderController {
   constructor(private readonly providerService: ProviderService) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.PROVIDER)
   @Get('prices')
   getProviderPrices(@Req() req: RequestWithUser): Promise<ProviderPriceDto[]> {
     return this.providerService.getProviderPrices(req.user.sub);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.PROVIDER)
   @Put('profile')
   updateProfile(
     @Req() req: RequestWithUser,
@@ -34,8 +32,6 @@ export class ProviderController {
     return this.providerService.updateProfile(req.user.sub, dto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.PROVIDER)
   @Put('prices')
   upsertPrice(
     @Req() req: RequestWithUser,
