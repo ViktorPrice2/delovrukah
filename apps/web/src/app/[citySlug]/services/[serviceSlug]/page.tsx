@@ -27,7 +27,7 @@ function getMinimalPrice(service: ServiceDetail): number | null {
 
 // --- ДИНАМИЧЕСКАЯ ГЕНЕРАЦИЯ МЕТАДАННЫХ ДЛЯ SEO ---
 export async function generateMetadata({ params }: ServicePageProps): Promise<Metadata> {
-  const { citySlug, serviceSlug } = await params;
+  const { citySlug, serviceSlug } = params;
 
   // Делаем ОДИН запрос, чтобы получить все данные
   const service = await getServiceDetailsBySlug(serviceSlug, citySlug);
@@ -41,37 +41,35 @@ export async function generateMetadata({ params }: ServicePageProps): Promise<Me
 
   const minPrice = getMinimalPrice(service);
   const priceLabel = minPrice ? `от ${minPrice.toLocaleString('ru-RU')} ₽` : "цена договорная";
+  const cityName = service.providers?.[0]?.city.name ?? citySlug;
 
   return {
-    title: `Заказать ${service.name} в г. ${service.providers?.[0]?.city.name ?? citySlug} - цены ${priceLabel} | Delovrukah.ru`,
-    description: service.description ?? `Узнайте подробности и закажите услугу «${service.name}» в городе ${service.providers?.[0]?.city.name ?? citySlug}.`,
+    title: `Заказать ${service.name} в г. ${cityName} - цены ${priceLabel} | Delovrukah.ru`,
+    description: service.description ?? `Узнайте подробности и закажите услугу «${service.name}» в городе ${cityName}.`,
   };
 }
 
 // --- КОМПОНЕНТ СТРАНИЦЫ ---
 export default async function ServicePage({ params }: ServicePageProps) {
-  const { citySlug, serviceSlug } = await params;
+  const { citySlug, serviceSlug } = params;
 
-  // --- НАЧАЛО ДИАГНОСТИКИ ---
-  console.log(`[SSR] Запрашиваю услугу: slug=${serviceSlug}, city=${citySlug}`);
   const service = await getServiceDetailsBySlug(serviceSlug, citySlug);
-  console.log('[SSR] Получен ответ от API:', JSON.stringify(service, null, 2)); // Выводим в красивом формате
-  // --- КОНЕЦ ДИАГНОСТИКИ ---
 
   // Проверяем, что API вернул данные. Если нет - 404.
   if (!service) {
-    console.log('[SSR] Услуга не найдена в API, вызываю notFound()');
     notFound();
   }
 
   const minPrice = getMinimalPrice(service);
+  const cityName = service.providers?.[0]?.city.name ?? citySlug;
+  const providers = service.providers ?? [];
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto p-4">
       <header className="space-y-2 border-b pb-4">
         {/* Хлебные крошки для навигации и SEO */}
         <nav className="text-sm text-muted-foreground">
-          <a href={`/${citySlug}`} className="hover:underline">{service.providers?.[0]?.city.name ?? 'Город'}</a>
+          <a href={`/${citySlug}`} className="hover:underline">{cityName}</a>
           {' / '}
           <a href={`/${citySlug}/${service.category.slug}`} className="hover:underline">{service.category.name}</a>
         </nav>
@@ -89,10 +87,10 @@ export default async function ServicePage({ params }: ServicePageProps) {
       )}
 
       <section className="space-y-4">
-        <h2 className="text-2xl font-semibold">Исполнители в г. {service.providers?.[0]?.city.name ?? citySlug}</h2>
-        {service.providers && service.providers.length > 0 ? (
+        <h2 className="text-2xl font-semibold">Исполнители в г. {cityName}</h2>
+        {providers.length > 0 ? (
           <ul className="space-y-4">
-            {service.providers.map((provider) => (
+            {providers.map((provider) => (
               <li key={provider.id} className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 transition hover:shadow-md">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                   <div className="font-medium">{provider.displayName}</div>
