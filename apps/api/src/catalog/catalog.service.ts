@@ -1,13 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   Category,
+  City,
+  Prisma,
+  ProviderProfile,
   ServiceTemplate,
   ServiceTemplateVersion,
 } from '@prisma/client';
+import { CityDto } from '../geo/dto/city.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CategoryDto } from './dto/category.dto';
 import {
   ServiceDetailDto,
+  ServiceProviderDto,
   ServiceSummaryDto,
   ServiceVersionDto,
 } from './dto/service.dto';
@@ -50,7 +55,10 @@ export class CatalogService {
     return services.map((service) => this.mapServiceSummary(service));
   }
 
-  async getServiceById(serviceId: string): Promise<ServiceDetailDto> {
+  async getServiceById(
+    serviceId: string,
+    citySlug?: string,
+  ): Promise<ServiceDetailDto> {
     const service = await this.prisma.serviceTemplate.findUnique({
       where: { id: serviceId },
       include: {
@@ -68,12 +76,52 @@ export class CatalogService {
     }
 
     const summary = this.mapServiceSummary(service);
+    const latestVersion = service.versions.at(0) ?? null;
+
+    let providers: ServiceProviderDto[] | undefined;
+
+    if (citySlug) {
+      const city = await this.prisma.city.findUnique({
+        where: { slug: citySlug },
+      });
+
+      if (!city || !latestVersion) {
+        providers = [];
+      } else {
+        const prices = await this.prisma.price.findMany({
+          where: {
+            serviceTemplateVersionId: latestVersion.id,
+            providerProfile: { cityId: city.id },
+          },
+          include: {
+            providerProfile: {
+              include: { city: true },
+            },
+          },
+          orderBy: { price: 'asc' },
+        });
+
+        providers = prices
+          .map((price) => {
+            if (!price.providerProfile.city) {
+              return null;
+            }
+
+            return this.mapServiceProvider(
+              price.providerProfile as ProviderProfile & { city: City },
+              price.price,
+            );
+          })
+          .filter((provider): provider is ServiceProviderDto => provider !== null);
+      }
+    }
 
     return {
       ...summary,
       authorId: service.authorId,
       keeperId: service.keeperId,
       category: this.mapCategory(service.category),
+      providers,
     };
   }
 
@@ -114,6 +162,27 @@ export class CatalogService {
       isActive: version.isActive,
       createdAt: version.createdAt,
       updatedAt: version.updatedAt,
+    };
+  }
+
+  private mapServiceProvider(
+    provider: ProviderProfile & { city: City },
+    price: Prisma.Decimal,
+  ): ServiceProviderDto {
+    return {
+      id: provider.id,
+      displayName: provider.displayName,
+      description: provider.description ?? null,
+      price: price.toNumber(),
+      city: this.mapCity(provider.city),
+    };
+  }
+
+  private mapCity(city: City): CityDto {
+    return {
+      id: city.id,
+      name: city.name,
+      slug: city.slug,
     };
   }
 }
