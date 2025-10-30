@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Role } from '@prisma/client';
@@ -61,7 +65,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(
+      dto.password,
+      user.passwordHash,
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -70,7 +77,11 @@ export class AuthService {
     return this.signToken(user.id, user.email, user.role);
   }
 
-  private async signToken(userId: string, email: string, role: Role): Promise<{ access_token: string }> {
+  private async signToken(
+    userId: string,
+    email: string,
+    role: Role,
+  ): Promise<{ access_token: string }> {
     const payload = { sub: userId, email, role };
     const secret = this.configService.get<string>('JWT_SECRET');
 

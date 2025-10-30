@@ -7,17 +7,25 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "check-types": "turbo run check-types",
+    "db:seed": "pnpm dotenv -- pnpm prisma db seed",
+    "db:studio": "pnpm dotenv -- pnpm prisma studio",
+    "db:generate": "pnpm dotenv -- pnpm prisma generate"
   },
   "devDependencies": {
+    "@eslint/js": "^9.18.0",
     "@types/node": "^24.9.1",
     "dotenv-cli": "^11.0.0",
     "eslint": "^9.38.0",
+    "eslint-plugin-jest": "^29.0.1",
+    "eslint-plugin-prettier": "^5.2.2",
+    "globals": "^16.0.0",
     "prettier": "^3.6.2",
     "prisma": "^6.18.0",
     "ts-node": "^10.9.2",
     "turbo": "^2.5.8",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "typescript-eslint": "^8.20.0"
   },
   "prisma": {
     "seed": "pnpm ts-node prisma/seed.ts"

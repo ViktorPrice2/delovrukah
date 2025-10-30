@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["es2022"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["apps/web/src/app/*"] // Помогает, если будете импортировать что-то из фронтенда
+    }
+  },
+  "include": [
+    "prisma/**/*.ts", // Включаем все .ts файлы в папке prisma
+    "scripts/**/*.ts"  // Включаем папку для будущих скриптов
+  ],
+  "exclude": [
+    "node_modules",
+    "apps" // Исключаем приложения, у них свои конфиги
+  ]
+}

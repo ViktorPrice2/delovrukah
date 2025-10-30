@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
-    "module": "commonjs", // <--- ИЗМЕНЕНО
+    "module": "commonjs",
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "target": "ES2023",
+    "lib": ["ES2023"], // <--- ДОБАВЛЕНО
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
@@ -17,6 +18,6 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
-    "typeRoots": ["../../node_modules/@types"] // <--- ДОБАВЛЕНО
+    "typeRoots": ["../../node_modules/@types"]
   }
 }
