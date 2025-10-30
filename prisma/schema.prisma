@@ -20,6 +20,8 @@ model User {
   role            Role
   providerProfile ProviderProfile?
   customerProfile CustomerProfile?
+  authoredServiceTemplates ServiceTemplate[] @relation("ServiceTemplateAuthor")
+  keptServiceTemplates     ServiceTemplate[] @relation("ServiceTemplateKeeper")
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -45,4 +47,48 @@ model CustomerProfile {
   preferredLanguage String?  @default("ru")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+model Category {
+  id               String            @id @default(cuid())
+  name             String            @unique
+  description      String?
+  serviceTemplates ServiceTemplate[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model ServiceTemplate {
+  id          String                    @id @default(cuid())
+  categoryId  String
+  name        String
+  description String?
+  authorId    String
+  keeperId    String
+  category    Category                  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  author      User                      @relation("ServiceTemplateAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  keeper      User                      @relation("ServiceTemplateKeeper", fields: [keeperId], references: [id], onDelete: Cascade)
+  versions    ServiceTemplateVersion[]
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  @@index([categoryId])
+  @@index([authorId])
+  @@index([keeperId])
+  @@unique([categoryId, name])
+}
+
+model ServiceTemplateVersion {
+  id                String          @id @default(cuid())
+  serviceTemplateId String
+  versionNumber     Int
+  title             String
+  description       String?
+  isActive          Boolean         @default(true)
+  serviceTemplate   ServiceTemplate @relation(fields: [serviceTemplateId], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([serviceTemplateId, versionNumber])
+  @@index([serviceTemplateId, isActive])
 }
