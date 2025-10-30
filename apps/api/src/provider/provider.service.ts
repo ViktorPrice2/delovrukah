@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ProviderCatalogCategoryDto } from './dto/provider-catalog.dto';
 import { ProviderPriceDto } from './dto/provider-price.dto';
 import { ProviderProfileDto } from './dto/provider-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -30,6 +31,77 @@ export class ProviderService {
       price: price.price.toNumber(),
       createdAt: price.createdAt,
       updatedAt: price.updatedAt,
+    }));
+  }
+
+  async getProviderCatalog(
+    userId: string,
+  ): Promise<ProviderCatalogCategoryDto[]> {
+    const providerProfile = await this.prisma.providerProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!providerProfile) {
+      throw new NotFoundException('Provider profile not found');
+    }
+
+    const categories = await this.prisma.category.findMany({
+      orderBy: { name: 'asc' },
+      include: {
+        serviceTemplates: {
+          orderBy: { name: 'asc' },
+          include: {
+            versions: {
+              where: { isActive: true },
+              orderBy: { versionNumber: 'desc' },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+
+    const prices = await this.prisma.price.findMany({
+      where: { providerProfileId: providerProfile.id },
+    });
+
+    const priceMap = new Map<string, number>(
+      prices.map((price) => [
+        price.serviceTemplateVersionId,
+        price.price.toNumber(),
+      ] as const),
+    );
+
+    return categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      description: category.description ?? null,
+      services: category.serviceTemplates.map((service) => {
+        const latestVersion = service.versions.at(0) ?? null;
+        const mappedVersion = latestVersion
+          ? {
+              id: latestVersion.id,
+              versionNumber: latestVersion.versionNumber,
+              title: latestVersion.title,
+              description: latestVersion.description ?? null,
+              isActive: latestVersion.isActive,
+              createdAt: latestVersion.createdAt,
+              updatedAt: latestVersion.updatedAt,
+              ...(priceMap.has(latestVersion.id)
+                ? { providerPrice: priceMap.get(latestVersion.id) }
+                : {}),
+            }
+          : null;
+
+        return {
+          id: service.id,
+          name: service.name,
+          slug: service.slug,
+          description: service.description ?? null,
+          latestVersion: mappedVersion,
+        };
+      }),
     }));
   }
 
