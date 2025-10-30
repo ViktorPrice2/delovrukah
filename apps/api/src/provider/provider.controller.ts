@@ -6,6 +6,7 @@ import { JwtPayload } from '../auth/jwt.strategy';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { ProviderService } from './provider.service';
+import { ProviderCatalogCategoryDto } from './dto/provider-catalog.dto';
 import { ProviderPriceDto } from './dto/provider-price.dto';
 import { ProviderProfileDto } from './dto/provider-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -22,6 +23,13 @@ export class ProviderController {
   @Get('prices')
   getProviderPrices(@Req() req: RequestWithUser): Promise<ProviderPriceDto[]> {
     return this.providerService.getProviderPrices(req.user.sub);
+  }
+
+  @Get('prices/catalog')
+  getProviderCatalog(
+    @Req() req: RequestWithUser,
+  ): Promise<ProviderCatalogCategoryDto[]> {
+    return this.providerService.getProviderCatalog(req.user.sub);
   }
 
   @Put('profile')
