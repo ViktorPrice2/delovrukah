@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import type { Category, City, Service } from "@/app/types/catalog.types";
-import { getCategoryBySlug, getCity, getServicesByCategory } from "@/app/lib/catalog-api";
+// --- НАЧАЛО ИЗМЕНЕНИЙ В ИМПОРТАХ ---
+import { getServicesByCategory } from "../../lib/catalog-api";
+import type { ServiceDetail } from "../../types/catalog.types";
+// --- КОНЕЦ ИЗМЕНЕНИЙ В ИМПОРТАХ ---
 
 export const dynamic = "force-dynamic";
 
@@ -11,69 +13,50 @@ type CategoryPageProps = {
   params: { citySlug: string; categorySlug: string };
 };
 
-export async function generateMetadata({
-  params,
-}: CategoryPageProps): Promise<Metadata> {
-  const { citySlug, categorySlug } = params;
+export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
+  const { citySlug, categorySlug } = await params;
+  
+  // Формируем заголовки на основе слагов - это быстро и надежно
+  const cityName = citySlug.charAt(0).toUpperCase() + citySlug.slice(1);
+  const categoryName = categorySlug.charAt(0).toUpperCase() + categorySlug.slice(1);
 
-  try {
-    const [city, category] = await Promise.all([
-      getCity(citySlug),
-      getCategoryBySlug(citySlug, categorySlug),
-    ]);
-
-    if (!city || !category) {
-      return {
-        title: "Категория не найдена | Delovrukah.ru",
-      };
-    }
-
-    return {
-      title: `${category.name} в городе ${city.name} | Delovrukah.ru`,
-      description:
-        category.description ?? `Список услуг категории «${category.name}» в городе ${city.name}.`,
-    };
-  } catch (error) {
-    console.error("Failed to generate metadata for category page", error);
-    return { title: "Delovrukah.ru" };
-  }
+  return {
+    title: `${categoryName} в городе ${cityName} — список услуг | Delovrukah.ru`,
+    description: `Список услуг в категории «${categoryName}» в городе ${cityName}.`,
+  };
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
-  const { citySlug, categorySlug } = params;
+  // --- НАЧАЛО ИЗМЕНЕНИЙ В ЛОГИКЕ ---
+  const { citySlug, categorySlug } = await params;
 
-  let city: City | undefined;
-  let category: Category | undefined;
-  let services: Service[] = [];
-
-  try {
-    [city, category] = await Promise.all([
-      getCity(citySlug),
-      getCategoryBySlug(citySlug, categorySlug),
-    ]);
-  } catch (error) {
-    console.error("Failed to load city or category", error);
-    throw error;
-  }
-
-  if (!city || !category) {
+  console.log(`[SSR] Запрашиваю услуги: category=${categorySlug}, city=${citySlug}`);
+  const services = await getServicesByCategory(citySlug, categorySlug);
+  console.log(`[SSR] Получено услуг: ${services?.length ?? 0}`);
+  
+  // Если API вернул null или пустой массив, значит, такой комбинации город+категория нет -> 404
+  if (!services || services.length === 0) {
+    console.log(`[SSR] Услуги для ${categorySlug}/${citySlug} не найдены, вызываю notFound()`);
     notFound();
   }
-
-  const currentCity = city;
-  const currentCategory = category;
-
-  try {
-    services = await getServicesByCategory(currentCity.slug, currentCategory.slug);
-  } catch (error) {
-    console.error("Failed to load services for category", error);
-  }
-
+  
+  // Данные о категории и городе мы можем взять из первой услуги в списке,
+  // так как они будут одинаковыми для всех.
+  const currentCategory = services[0].category;
+  const currentCityName = services[0].providers?.[0]?.city.name ?? citySlug;
+  // --- КОНЕЦ ИЗМЕНЕНИЙ В ЛОГИКЕ ---
+  
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
+      <header className="space-y-2 border-b pb-4">
+        {/* Хлебные крошки */}
+        <nav className="text-sm text-muted-foreground">
+          <a href={`/${citySlug}`} className="hover:underline">{currentCityName}</a>
+          {' / '}
+          <span>{currentCategory.name}</span>
+        </nav>
         <h1 className="text-3xl font-bold">
-          {currentCategory.name} — {currentCity.name}
+          {currentCategory.name}
         </h1>
         {currentCategory.description && (
           <p className="text-muted-foreground">{currentCategory.description}</p>
@@ -81,27 +64,27 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       </header>
 
       <section className="space-y-4">
-        <h2 className="text-2xl font-semibold">Услуги</h2>
-        {services.length === 0 ? (
-          <p>Услуги в этой категории пока не добавлены.</p>
-        ) : (
-          <ul className="space-y-4">
-            {services.map((service) => (
-              <li key={service.id} className="rounded border p-4 shadow-sm transition hover:shadow">
-                <h3 className="text-xl font-medium">{service.name}</h3>
+        <h2 className="text-2xl font-semibold">Услуги в категории</h2>
+        <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {services.map((service) => (
+            <li key={service.id}>
+              <Link
+                href={`/${citySlug}/services/${service.slug}`}
+                className="block p-6 border rounded-lg bg-white shadow-sm transition-shadow duration-200 hover:shadow-lg h-full"
+              >
+                <h3 className="text-xl font-semibold text-slate-800">{service.name}</h3>
                 {service.description && (
-                  <p className="mt-2 text-sm text-muted-foreground">{service.description}</p>
+                  <p className="mt-2 text-sm text-slate-600 line-clamp-2">{service.description}</p>
                 )}
-                <Link
-                  href={`/${currentCity.slug}/services/${service.slug}`}
-                  className="mt-4 inline-flex items-center font-semibold text-blue-600 hover:underline"
+                <div
+                  className="mt-4 inline-flex items-center font-semibold text-blue-600"
                 >
-                  Подробнее об услуге
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+                  Подробнее →
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
     </div>
   );

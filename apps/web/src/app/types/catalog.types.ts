@@ -1,33 +1,67 @@
+// apps/web/src/app/types/catalog.types.ts
+
+// ============================================================================
+// Базовые сущности, как они приходят от API
+// ============================================================================
+
+/** Описывает город */
 export interface City {
   id: string;
   name: string;
   slug: string;
-  description?: string;
 }
 
+/** Описывает категорию услуг */
 export interface Category {
   id: string;
   name: string;
   slug: string;
-  description?: string;
-  citySlug?: string;
+  description: string | null;
 }
 
+/** Описывает исполнителя в контексте конкретной услуги */
 export interface Provider {
   id: string;
-  name: string;
+  displayName: string;
+  description: string | null;
   price: number;
-  rating?: number;
-  description?: string;
+  city: City;
 }
 
-export interface Service {
+/** Описывает конкретную версию услуги */
+export interface ServiceVersion {
   id: string;
-  name: string;
+  versionNumber: number;
+  title: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string; // Даты приходят как строки в JSON
+  updatedAt: string;
+}
+
+// ============================================================================
+// Составные типы для страниц
+// ============================================================================
+
+/**
+ * Описывает услугу в сокращенном виде (для списков и карточек)
+ */
+export interface ServiceSummary {
+  id: string;
   slug: string;
-  description?: string;
-  priceFrom?: number;
-  citySlug: string;
-  categorySlug: string;
-  providers?: Provider[];
+  name: string;
+  description: string | null;
+  categoryId: string;
+  latestVersion: ServiceVersion | null;
+}
+
+/**
+ * Описывает полную, детальную информацию об услуге для ее страницы.
+ * Расширяет ServiceSummary, добавляя вложенные объекты.
+ */
+export interface ServiceDetail extends ServiceSummary {
+  authorId: string | null;
+  keeperId: string | null;
+  category: Category;      // Вложенный объект с данными категории
+  providers?: Provider[];    // Массив вложенных объектов исполнителей
 }

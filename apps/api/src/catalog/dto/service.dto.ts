@@ -17,6 +17,7 @@ export class ServiceSummaryDto {
   name: string;
   description: string | null;
   latestVersion: ServiceVersionDto | null;
+  slug: string;
 }
 
 export class ServiceProviderDto {
@@ -28,8 +29,8 @@ export class ServiceProviderDto {
 }
 
 export class ServiceDetailDto extends ServiceSummaryDto {
-  authorId: string;
-  keeperId: string;
+  authorId: string | null;
+  keeperId: string | null;
   category: CategoryDto;
   providers?: ServiceProviderDto[];
 }

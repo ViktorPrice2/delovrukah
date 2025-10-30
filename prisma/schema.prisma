@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["nativeDistinct"]
 }
 
@@ -14,44 +14,44 @@ enum Role {
 }
 
 model City {
-  id               String             @id @default(cuid())
+  id               String            @id @default(cuid())
   name             String
-  slug             String             @unique
+  slug             String            @unique
   providerProfiles ProviderProfile[]
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@index([name])
 }
 
 model User {
-  id              String            @id @default(cuid())
-  email           String            @unique
-  phone           String?           @unique
+  id              String           @id @default(cuid())
+  email           String           @unique
+  phone           String?          @unique
   passwordHash    String
   role            Role
   providerProfile ProviderProfile?
   customerProfile CustomerProfile?
-  authoredServiceTemplates ServiceTemplate[] @relation("ServiceTemplateAuthor")
-  keptServiceTemplates     ServiceTemplate[] @relation("ServiceTemplateKeeper")
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  authoredServices ServiceTemplate[] @relation("AuthoredServices") // <-- Связь для Автора
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@index([role])
 }
 
 model ProviderProfile {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  displayName  String
-  description  String?
-  cityId       String?
-  city         City?     @relation(fields: [cityId], references: [id], onDelete: SetNull)
-  homeLocation Unsupported("point")?
-  prices       Price[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String            @id @default(cuid())
+  userId           String            @unique
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName      String
+  description      String?
+  cityId           String?
+  city             City?             @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  homeLocation     Unsupported("point")?
+  prices           Price[]
+  keptServices     ServiceTemplate[] @relation("KeptServices") // <-- Связь для Хранителя
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@index([cityId])
 }
@@ -69,6 +69,7 @@ model CustomerProfile {
 model Category {
   id               String            @id @default(cuid())
   name             String            @unique
+  slug             String            @unique // <-- ИСПРАВЛЕНО: Добавлено поле slug
   description      String?
   serviceTemplates ServiceTemplate[]
   createdAt        DateTime          @default(now())
@@ -76,23 +77,30 @@ model Category {
 }
 
 model ServiceTemplate {
-  id          String                    @id @default(cuid())
+  id          String                 @id @default(cuid())
   categoryId  String
   name        String
+  slug        String                 // <-- ИСПРАВЛЕНО: Добавлено поле slug
   description String?
-  authorId    String
-  keeperId    String
-  category    Category                  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  author      User                      @relation("ServiceTemplateAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  keeper      User                      @relation("ServiceTemplateKeeper", fields: [keeperId], references: [id], onDelete: Cascade)
-  versions    ServiceTemplateVersion[]
-  createdAt   DateTime                  @default(now())
-  updatedAt   DateTime                  @updatedAt
+  
+  // ИСПРАВЛЕНО: Автор - это User, может быть null
+  authorId    String?
+  author      User?                  @relation("AuthoredServices", fields: [authorId], references: [id], onDelete: SetNull)
 
+  // ИСПРАВЛЕНО: Хранитель - это ProviderProfile, может быть null
+  keeperId    String?
+  keeper      ProviderProfile?       @relation("KeptServices", fields: [keeperId], references: [id], onDelete: SetNull)
+
+  category    Category               @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  versions    ServiceTemplateVersion[]
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@unique([categoryId, name])
+  @@unique([categoryId, slug]) // <-- ИСПРАВЛЕНО: Добавлен уникальный индекс
   @@index([categoryId])
   @@index([authorId])
   @@index([keeperId])
-  @@unique([categoryId, name])
 }
 
 model ServiceTemplateVersion {
@@ -112,14 +120,14 @@ model ServiceTemplateVersion {
 }
 
 model Price {
-  id                       String                   @id @default(cuid())
+  id                       String                 @id @default(cuid())
   providerProfileId        String
   serviceTemplateVersionId String
-  price                    Decimal                  @db.Decimal(10, 2)
-  providerProfile          ProviderProfile          @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
-  serviceTemplateVersion   ServiceTemplateVersion   @relation(fields: [serviceTemplateVersionId], references: [id], onDelete: Cascade)
-  createdAt                DateTime                 @default(now())
-  updatedAt                DateTime                 @updatedAt
+  price                    Decimal                @db.Decimal(10, 2)
+  providerProfile          ProviderProfile        @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+  serviceTemplateVersion   ServiceTemplateVersion @relation(fields: [serviceTemplateVersionId], references: [id], onDelete: Cascade)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
 
   @@unique([providerProfileId, serviceTemplateVersionId])
   @@index([serviceTemplateVersionId])

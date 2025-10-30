@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import type { Category, City } from "@/app/types/catalog.types";
-import { getCategoriesByCity, getCity } from "@/app/lib/catalog-api";
+// --- НАЧАЛО ИЗМЕНЕНИЙ В ИМПОРТАХ ---
+// Импортируем ОДНУ функцию, которая получит всё, и правильные типы
+import { getCategories } from "../lib/catalog-api";
+import type { Category } from "../types/catalog.types";
+// --- КОНЕЦ ИЗМЕНЕНИЙ В ИМПОРТАХ ---
 
 export const dynamic = "force-dynamic";
 
@@ -11,79 +14,70 @@ type CityPageProps = {
   params: { citySlug: string };
 };
 
-export async function generateMetadata({
-  params,
-}: CityPageProps): Promise<Metadata> {
-  const { citySlug } = params;
-  try {
-    const city = await getCity(citySlug);
-    if (!city) {
-      return {
-        title: "Город не найден | Delovrukah.ru",
-      };
-    }
+export async function generateMetadata({ params }: CityPageProps): Promise<Metadata> {
+  // Turbopack может передавать params как Promise, поэтому "разворачиваем" его
+  const { citySlug } = await params;
+  
+  // Мы не можем легко получить имя города здесь без отдельного запроса,
+  // поэтому генерируем title на основе слага. Это надежнее.
+  const cityName = citySlug.charAt(0).toUpperCase() + citySlug.slice(1);
 
-    return {
-      title: `${city.name} — услуги и категории | Delovrukah.ru`,
-      description: city.description ?? `Каталог услуг в городе ${city.name}.`,
-    };
-  } catch (error) {
-    console.error("Failed to generate metadata for city page", error);
-    return {
-      title: "Delovrukah.ru",
-    };
-  }
+  return {
+    title: `Услуги в городе ${cityName} — категории | Delovrukah.ru`,
+    description: `Каталог услуг и исполнителей в городе ${cityName}. Сантехника, электрика, ремонт и многое другое.`,
+  };
 }
 
 export default async function CityPage({ params }: CityPageProps) {
-  const { citySlug } = params;
+  // --- НАЧАЛО ИЗМЕНЕНИЙ В ЛОГИКЕ ---
+  const { citySlug } = await params; // "Разворачиваем" Promise
 
-  let city: City | undefined;
-  let categories: Category[] = [];
+  console.log(`[SSR] Запрашиваю категории для города: ${citySlug}`);
+  // Делаем ОДИН запрос, чтобы получить все категории для этого города
+  const categories = await getCategories(citySlug);
+  console.log(`[SSR] Получено категорий: ${categories?.length ?? 0}`);
 
-  try {
-    city = await getCity(citySlug);
-  } catch (error) {
-    console.error("Failed to load city", error);
-    throw error;
-  }
-
-  if (!city) {
+  // Если API вернул null или пустой массив, значит, такого города/категорий нет -> 404
+  if (!categories || categories.length === 0) {
+    console.log(`[SSR] Категории для города ${citySlug} не найдены, вызываю notFound()`);
     notFound();
   }
-
-  const currentCity = city;
-
-  try {
-    categories = await getCategoriesByCity(currentCity.slug);
-  } catch (error) {
-    console.error("Failed to load categories for city", error);
-  }
+  
+  // Мы не можем быть уверены в имени города, так как API /categories его не возвращает.
+  // В идеале - API должен был бы возвращать { city: { name: 'Москва'}, categories: [...] }
+  // Пока используем слаг.
+  const cityName = citySlug.charAt(0).toUpperCase() + citySlug.slice(1);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ В ЛОГИКЕ ---
 
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <h1 className="text-3xl font-bold">Услуги в городе {currentCity.name}</h1>
-        {currentCity.description && <p className="text-muted-foreground">{currentCity.description}</p>}
+        <h1 className="text-3xl font-bold">Услуги в городе {cityName}</h1>
+        <p className="text-muted-foreground">Выберите нужную категорию, чтобы найти исполнителя.</p>
       </header>
 
       <section className="space-y-4">
-        <h2 className="text-2xl font-semibold">Категории</h2>
+        <h2 className="text-2xl font-semibold">Категории услуг</h2>
+        {/* Проверка на пустой массив остается, на всякий случай */}
         {categories.length === 0 ? (
           <p>Категории пока не добавлены для этого города.</p>
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {categories.map((category) => (
-              <li key={category.id} className="rounded border p-4 shadow-sm transition hover:shadow">
-                <h3 className="text-xl font-medium">{category.name}</h3>
-                {category.description && (
-                  <p className="mt-2 text-sm text-muted-foreground">{category.description}</p>
-                )}
+              <li key={category.id}>
                 <Link
-                  href={`/${currentCity.slug}/${category.slug}`}
-                  className="mt-4 inline-flex items-center font-semibold text-blue-600 hover:underline"
+                  href={`/${citySlug}/${category.slug}`}
+                  className="block rounded-lg border bg-white p-6 shadow-sm transition-shadow duration-200 hover:shadow-lg"
                 >
-                  Смотреть услуги
+                  <h3 className="text-xl font-semibold text-slate-800">{category.name}</h3>
+                  {category.description && (
+                    <p className="mt-2 text-sm text-slate-600">{category.description}</p>
+                  )}
+                  <div
+                    className="mt-4 inline-flex items-center font-semibold text-blue-600"
+                  >
+                    Смотреть услуги →
+                  </div>
                 </Link>
               </li>
             ))}

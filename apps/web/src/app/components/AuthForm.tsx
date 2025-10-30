@@ -1,7 +1,7 @@
 // apps/web/src/app/components/AuthForm.tsx
 
 "use client";
-
+import axios from 'axios';
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,7 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { jwtDecode } from "jwt-decode";
 
 import { api } from '@/lib/api';
-import { useAuthStore } from "@/app/store/auth.store";
+import { useAuth as useAuthStore } from '../store/auth.store';
 import { useIsClient } from '@/hooks/useIsClient'; // Убедитесь, что этот файл создан
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -67,7 +67,6 @@ export function AuthForm({
   heading,
   description,
   submitLabel,
-  redirectTo,
 }: AuthFormProps) {
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
@@ -89,17 +88,19 @@ export function AuthForm({
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    setServerError(null);
+    setServerError(null); // Сбрасываем предыдущие ошибки сервера
 
     const endpoint = mode === 'signup' ? '/auth/signup' : '/auth/signin';
 
+    // Формируем payload в зависимости от режима (регистрация или вход)
     const payload =
       mode === "signup"
         ? {
             email: values.email,
             password: values.password,
-            displayName: values.fullName?.trim(),
-            role: "CUSTOMER",
+            displayName: values.fullName?.trim(), // displayName для исполнителя
+            fullName: values.fullName?.trim(), // fullName для заказчика
+            role: "CUSTOMER", // По умолчанию регистрируем как CUSTOMER
           }
         : {
             email: values.email,
@@ -111,11 +112,14 @@ export function AuthForm({
       const token = response.data?.access_token;
 
       if (!token) {
+        // Эта ошибка скорее для нашей отладки, пользователь ее не увидит
         throw new Error("Некорректный ответ сервера: токен не получен.");
       }
 
+      // Декодируем токен, чтобы получить базовую информацию о пользователе
       const decodedToken: { email: string; role: 'CUSTOMER' | 'PROVIDER' } = jwtDecode(token);
 
+      // Вызываем действие `login` из нашего Zustand store
       login({
         token,
         user: {
@@ -123,20 +127,25 @@ export function AuthForm({
           role: decodedToken.role,
         },
       });
-      
-      router.replace(redirectTo ?? "/profile");
 
-    } catch (error: any) {
-      console.error("Ошибка аутентификации", error);
+      // Перенаправляем пользователя в профиль после успешного входа/регистрации
+      router.push('/profile');
 
-      const message =
-        error.response?.data?.message ||
-        "Не удалось выполнить запрос. Попробуйте снова.";
-      
-      if (Array.isArray(message)) {
-        setServerError(message.join(', '));
+    } catch (error) {
+      // ПРАВИЛЬНАЯ ОБРАБОТКА ДЛЯ ТИПА 'unknown'
+      if (axios.isAxiosError(error) && error.response) {
+        // Теперь TypeScript уверен, что 'error' - это AxiosError
+        // и у него есть свойство 'response'
+        console.error('Ошибка API:', error.response.data);
+        
+        // Получаем сообщение об ошибке. Оно может быть в error.response.data.message
+        const errorMessage = error.response.data?.message || 'Произошла ошибка при запросе к серверу.';
+        setServerError(errorMessage);
+        
       } else {
-        setServerError(message);
+        // Обработка всех остальных видов ошибок
+        console.error('Произошла неизвестная ошибка:', error);
+        setServerError('Произошла непредвиденная ошибка. Проверьте подключение к сети.');
       }
     }
   });

@@ -1,6 +1,15 @@
 import { Prisma, PrismaClient, Role } from '@prisma/client';
+import { slugify } from 'transliteration'; // Установим эту библиотеку
 
 const prisma = new PrismaClient();
+
+// --- НОВАЯ ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ---
+function generateSlug(text: string): string {
+  // slugify из библиотеки transliteration отлично преобразует кириллицу
+  // "Установка Смесителя" -> "ustanovka-smesitelya"
+  return slugify(text, { lowercase: true, separator: '-' });
+}
+// --- КОНЕЦ НОВОЙ ФУНКЦИИ ---
 
 type SeedServiceVersion = {
   versionNumber: number;
@@ -152,6 +161,17 @@ const categories: SeedCategory[] = [
     description: 'Обслуживание систем отопления и кондиционирования.',
     services: [
       {
+        name: 'Установка кондиционера',
+        description: 'Профессиональная установка сплит-систем любой мощности.',
+        versions: [
+            {
+                versionNumber: 1,
+                title: 'Стандартная установка кондиционера до 3 кВт',
+                description: 'Включает монтаж внутреннего и внешнего блоков, прокладку трассы до 3 метров.',
+            },
+        ],
+      },
+      {
         name: 'Чистка кондиционера',
         description: 'Промывка фильтров и обработка теплообменника.',
         versions: [
@@ -229,6 +249,11 @@ const providerSeeds: SeedProvider[] = [
         serviceName: 'Чистка сифона',
         price: 1500,
       },
+      {
+        categoryName: 'Климат',
+        serviceName: 'Установка кондиционера',
+        price: 9500,
+      }
     ],
   },
   {
@@ -287,34 +312,9 @@ const providerSeeds: SeedProvider[] = [
   },
 ];
 
-async function ensureSeedUsers() {
-  const [author, keeper] = await Promise.all([
-    prisma.user.upsert({
-      where: { email: 'catalog-author@example.com' },
-      update: {},
-      create: {
-        email: 'catalog-author@example.com',
-        passwordHash: 'seeded-hash',
-        role: Role.PROVIDER,
-      },
-    }),
-    prisma.user.upsert({
-      where: { email: 'catalog-keeper@example.com' },
-      update: {},
-      create: {
-        email: 'catalog-keeper@example.com',
-        passwordHash: 'seeded-hash',
-        role: Role.PROVIDER,
-      },
-    }),
-  ]);
+// Функция `ensureSeedUsers` больше не нужна в старом виде
 
-  return { authorId: author.id, keeperId: keeper.id };
-}
-
-async function seedCatalog() {
-  const { authorId, keeperId } = await ensureSeedUsers();
-
+async function seedCatalog(authorId: string) {
   for (const categoryData of categories) {
     const category = await prisma.category.upsert({
       where: { name: categoryData.name },
@@ -323,26 +323,26 @@ async function seedCatalog() {
       },
       create: {
         name: categoryData.name,
+        slug: generateSlug(categoryData.name),
         description: categoryData.description ?? null,
       },
     });
 
     for (const serviceData of categoryData.services) {
+      // KeeperId пока не назначаем, так как не знаем, кто будет хранителем
       const service = await prisma.serviceTemplate.upsert({
         where: {
           categoryId_name: { categoryId: category.id, name: serviceData.name },
         },
         update: {
           description: serviceData.description ?? null,
-          authorId,
-          keeperId,
         },
         create: {
           categoryId: category.id,
           name: serviceData.name,
+          slug: generateSlug(serviceData.name),
           description: serviceData.description ?? null,
-          authorId,
-          keeperId,
+          authorId: authorId, // Назначаем автора
         },
       });
 
@@ -424,7 +424,7 @@ async function setProviderHomeLocation(
 ) {
   await prisma.$executeRaw`
     UPDATE "ProviderProfile"
-    SET "homeLocation" = point(${longitude}, ${latitude})
+    SET "homeLocation" = ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::point
     WHERE "id" = ${providerProfileId}
   `;
 }
@@ -511,18 +511,37 @@ async function seedProviders(
 }
 
 async function main() {
-  await seedCatalog();
+  console.log('Starting seed...');
+  
+  // 1. Создаем тестового пользователя-автора
+  const author = await prisma.user.upsert({
+    where: { email: 'catalog-author@example.com' },
+    update: {},
+    create: {
+      email: 'catalog-author@example.com',
+      passwordHash: 'seeded-hash',
+      role: Role.PROVIDER, // Авторы могут быть и исполнителями
+    },
+  });
+
+  // 2. Создаем города
   const cityMap = await seedCities();
+  
+  // 3. Создаем каталог, передавая ID автора
+  await seedCatalog(author.id);
+  
+  // 4. Создаем исполнителей и их цены
   await seedProviders(cityMap);
+  
+  console.log('Seed finished.');
 }
 
 main()
   .then(async () => {
-    console.log('Catalog data seeded successfully');
     await prisma.$disconnect();
   })
   .catch(async (e) => {
-    console.error(e);
+    console.error('An error occurred during seeding:', e);
     await prisma.$disconnect();
     process.exit(1);
   });
