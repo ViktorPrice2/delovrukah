@@ -12,6 +12,17 @@ enum Role {
   PROVIDER
 }
 
+model City {
+  id               String             @id @default(cuid())
+  name             String
+  slug             String             @unique
+  providerProfiles ProviderProfile[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([name])
+}
+
 model User {
   id              String            @id @default(cuid())
   email           String            @unique
@@ -29,14 +40,20 @@ model User {
 }
 
 model ProviderProfile {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  displayName String
-  description String?
-  hourlyRate  Decimal?  @db.Decimal(10, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName  String
+  description  String?
+  hourlyRate   Decimal?  @db.Decimal(10, 2)
+  cityId       String?
+  city         City?     @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  homeLocation Unsupported("point")?
+  prices       Price[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([cityId])
 }
 
 model CustomerProfile {
@@ -86,9 +103,24 @@ model ServiceTemplateVersion {
   description       String?
   isActive          Boolean         @default(true)
   serviceTemplate   ServiceTemplate @relation(fields: [serviceTemplateId], references: [id], onDelete: Cascade)
+  prices            Price[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   @@unique([serviceTemplateId, versionNumber])
   @@index([serviceTemplateId, isActive])
+}
+
+model Price {
+  id                       String                   @id @default(cuid())
+  providerProfileId        String
+  serviceTemplateVersionId String
+  price                    Decimal                  @db.Decimal(10, 2)
+  providerProfile          ProviderProfile          @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+  serviceTemplateVersion   ServiceTemplateVersion   @relation(fields: [serviceTemplateVersionId], references: [id], onDelete: Cascade)
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+
+  @@unique([providerProfileId, serviceTemplateVersionId])
+  @@index([serviceTemplateVersionId])
 }

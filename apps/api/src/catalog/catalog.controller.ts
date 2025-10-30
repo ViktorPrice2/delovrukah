@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { CategoryDto } from './dto/category.dto';
 import { ServiceDetailDto, ServiceSummaryDto } from './dto/service.dto';
@@ -20,7 +20,10 @@ export class CatalogController {
   }
 
   @Get('services/:id')
-  getService(@Param('id') serviceId: string): Promise<ServiceDetailDto> {
-    return this.catalogService.getServiceById(serviceId);
+  getService(
+    @Param('id') serviceId: string,
+    @Query('citySlug') citySlug?: string,
+  ): Promise<ServiceDetailDto> {
+    return this.catalogService.getServiceById(serviceId, citySlug);
   }
 }
