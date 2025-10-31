@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { FormEvent, use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { api } from "@/lib/api";
@@ -14,7 +14,7 @@ interface OrderPageParams {
 }
 
 interface OrderPageProps {
-  params: OrderPageParams;
+  params: Promise<OrderPageParams>;
 }
 
 interface RawChatMessage extends Partial<ChatMessage> {
@@ -28,7 +28,7 @@ interface RawChatMessage extends Partial<ChatMessage> {
 }
 
 export default function OrderDetailsPage({ params }: OrderPageProps) {
-  const { orderId } = params;
+  const { orderId } = use(params);
   const router = useRouter();
   const { user, token, isLoading } = useAuth((state) => ({
     user: state.user,
