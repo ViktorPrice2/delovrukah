@@ -76,21 +76,32 @@ export async function getServicesByCategory(citySlug: string, categorySlug: stri
  * @returns {Promise<ServiceDetail | null>} - Объект услуги или null, если не найдено.
  */
 export async function getServiceDetailsBySlug(
-  serviceSlug: string,
+  serviceSlug: string | null | undefined,
   citySlug: string,
   fallbackId?: string
 ): Promise<ServiceDetail | null> {
-  const normalizedSlug = serviceSlug.trim();
-  const primary = await fetchFromApi<ServiceDetail>(
-    `/services/${encodeURIComponent(normalizedSlug)}?citySlug=${encodeURIComponent(citySlug)}`
-  );
+  const normalizedSlug = serviceSlug?.trim();
+  let primary: ServiceDetail | null = null;
 
-  if (primary || !fallbackId) {
+  if (normalizedSlug) {
+    primary = await fetchFromApi<ServiceDetail>(
+      `/services/${encodeURIComponent(normalizedSlug)}?citySlug=${encodeURIComponent(citySlug)}`
+    );
+
+    if (primary || !fallbackId) {
+      return primary;
+    }
+  } else if (!fallbackId) {
+    // Нечего искать: слаг не передан и альтернативный идентификатор отсутствует.
+    return null;
+  }
+
+  const normalizedFallback = fallbackId?.trim();
+  if (!normalizedFallback || normalizedFallback.length === 0) {
     return primary;
   }
 
-  const normalizedFallback = fallbackId.trim();
-  if (normalizedFallback.length === 0 || normalizedFallback === normalizedSlug) {
+  if (normalizedSlug && normalizedFallback === normalizedSlug) {
     return primary;
   }
 
