@@ -54,7 +54,11 @@ export const useAuth = create<AuthState>()(
 
         // Не выставляем isLoading: true здесь, т.к. rehydrate уже это сделал
         try {
-          const response = await api.get<AuthMeResponse>('/auth/me'); // Указываем тип ответа
+          const response = await api.get<AuthMeResponse>('/auth/me', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }); // Указываем тип ответа
           const user = response.data;
           if (user && user.email && user.role && user.sub) {
             set({
