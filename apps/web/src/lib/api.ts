@@ -1,16 +1,9 @@
-// apps/web/src/lib/api.ts
-
 import axios from 'axios';
 
-// Читаем ПРАВИЛЬНОЕ имя переменной
-const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-if (!baseURL) {
-  console.error("NEXT_PUBLIC_API_BASE_URL is not defined in .env.local");
-}
+import { getApiBaseUrl } from './get-api-base-url';
 
 export const api = axios.create({
-  baseURL: baseURL,
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
