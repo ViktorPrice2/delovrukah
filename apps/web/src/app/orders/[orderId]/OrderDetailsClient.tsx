@@ -63,7 +63,10 @@ export function OrderDetailsClient({ orderId }: OrderDetailsClientProps) {
       return;
     }
 
-    if (user.role !== 'CUSTOMER') {
+    const isCustomerOrProvider =
+      user.role === 'CUSTOMER' || user.role === 'PROVIDER';
+
+    if (!isCustomerOrProvider) {
       router.replace('/');
       return;
     }
@@ -75,7 +78,11 @@ export function OrderDetailsClient({ orderId }: OrderDetailsClientProps) {
         const response = await api.get<OrderDetails>(`/orders/${orderId}`);
         const fetchedOrder = response.data;
 
-        if (fetchedOrder.customer?.email && fetchedOrder.customer.email !== user.email) {
+        if (
+          user.role === 'CUSTOMER' &&
+          fetchedOrder.customer?.email &&
+          fetchedOrder.customer.email !== user.email
+        ) {
           setError('У вас нет доступа к этому заказу.');
           router.replace('/');
           return;
