@@ -261,6 +261,8 @@ export class CatalogService {
       unitOfMeasure: version.unitOfMeasure,
       requiredTools: version.requiredTools,
       customerRequirements: version.customerRequirements,
+      media: version.media,
+      estimatedTime: version.estimatedTime ?? null,
       isActive: version.isActive,
       createdAt: version.createdAt,
       updatedAt: version.updatedAt,

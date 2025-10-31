@@ -1,5 +1,11 @@
 import { getApiBaseUrl } from "@/lib/get-api-base-url";
-import type { Category, City, ServiceDetail, ServiceVersion } from "../types/catalog.types";
+import type {
+  Category,
+  City,
+  ServiceDetail,
+  ServiceMediaItem,
+  ServiceVersion,
+} from "../types/catalog.types";
 import {
   findMockServiceBySlugOrId,
   getMockCategories,
@@ -77,12 +83,72 @@ function normalizeStringArray(value: unknown): string[] | null {
   return String(value).trim().length > 0 ? [String(value).trim()] : null;
 }
 
+function normalizeMediaItem(item: unknown, title: string): ServiceMediaItem | null {
+  if (!item) {
+    return null;
+  }
+
+  if (typeof item === "string") {
+    const trimmed = item.trim();
+    if (!trimmed) {
+      return null;
+    }
+    return {
+      type: "image",
+      url: trimmed,
+      alt: `${title}`,
+    };
+  }
+
+  if (typeof item === "object") {
+    const record = item as Record<string, unknown>;
+    const type = record.type === "video" ? "video" : "image";
+    const url = typeof record.url === "string" ? record.url.trim() : "";
+
+    if (!url) {
+      return null;
+    }
+
+    const altValue = record.alt;
+    const alt = typeof altValue === "string" && altValue.trim().length > 0 ? altValue.trim() : null;
+    const preview = record.previewUrl;
+    const previewUrl = typeof preview === "string" && preview.trim().length > 0 ? preview.trim() : null;
+
+    return {
+      type,
+      url,
+      alt,
+      previewUrl,
+    };
+  }
+
+  return null;
+}
+
+function normalizeMedia(value: unknown, title: string): ServiceMediaItem[] | null {
+  if (!value) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map((item) => normalizeMediaItem(item, title))
+      .filter((item): item is ServiceMediaItem => Boolean(item));
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  const single = normalizeMediaItem(value, title);
+  return single ? [single] : null;
+}
+
 function normalizeServiceVersion(version: ServiceVersion | null | undefined): ServiceVersion | null {
   if (!version) {
     return null;
   }
 
   const unitOfMeasure = typeof version.unitOfMeasure === "string" ? version.unitOfMeasure.trim() : null;
+  const estimatedTime =
+    typeof version.estimatedTime === "string" ? version.estimatedTime.trim() : null;
 
   return {
     ...version,
@@ -92,6 +158,8 @@ function normalizeServiceVersion(version: ServiceVersion | null | undefined): Se
     unitOfMeasure: unitOfMeasure && unitOfMeasure.length > 0 ? unitOfMeasure : null,
     requiredTools: normalizeStringArray(version.requiredTools),
     customerRequirements: normalizeStringArray(version.customerRequirements),
+    media: normalizeMedia(version.media, version.title),
+    estimatedTime: estimatedTime && estimatedTime.length > 0 ? estimatedTime : null,
   };
 }
 
