@@ -38,6 +38,9 @@ const signupSchema = signinSchema
       .string()
       .min(1, "Повторите пароль")
       .min(MIN_PASSWORD_LENGTH, `Пароль должен быть не короче ${MIN_PASSWORD_LENGTH} символов`),
+    role: z.enum(["CUSTOMER", "PROVIDER"], {
+      required_error: "Выберите роль",
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Пароли не совпадают",
@@ -84,6 +87,7 @@ export function AuthForm({
       password: "",
       fullName: "",
       confirmPassword: "",
+      role: "CUSTOMER",
     },
   });
 
@@ -100,7 +104,7 @@ export function AuthForm({
             password: values.password,
             displayName: values.fullName?.trim(), // displayName для исполнителя
             fullName: values.fullName?.trim(), // fullName для заказчика
-            role: "CUSTOMER", // По умолчанию регистрируем как CUSTOMER
+            role: values.role ?? "CUSTOMER",
           }
         : {
             email: values.email,
@@ -128,8 +132,10 @@ export function AuthForm({
         },
       });
 
-      // Перенаправляем пользователя в профиль после успешного входа/регистрации
-      router.push('/profile');
+      // Перенаправляем пользователя на страницу в зависимости от роли
+      const redirectPath =
+        decodedToken.role === 'PROVIDER' ? '/profile' : '/orders';
+      router.push(redirectPath);
 
     } catch (error) {
       // ПРАВИЛЬНАЯ ОБРАБОТКА ДЛЯ ТИПА 'unknown'
@@ -228,6 +234,35 @@ export function AuthForm({
                 </span>
               )}
             </label>
+
+            <fieldset className="flex flex-col gap-3 rounded-lg border border-neutral-200 p-4">
+              <legend className="text-sm font-medium text-neutral-700">
+                Выберите вашу роль
+              </legend>
+              <label className="flex items-center gap-2 text-sm text-neutral-700">
+                <input
+                  type="radio"
+                  value="CUSTOMER"
+                  className="h-4 w-4 border-neutral-300 text-neutral-900 focus:ring-neutral-900/10"
+                  {...register("role")}
+                />
+                Я — Заказчик
+              </label>
+              <label className="flex items-center gap-2 text-sm text-neutral-700">
+                <input
+                  type="radio"
+                  value="PROVIDER"
+                  className="h-4 w-4 border-neutral-300 text-neutral-900 focus:ring-neutral-900/10"
+                  {...register("role")}
+                />
+                Я — Исполнитель
+              </label>
+              {errors.role && (
+                <span className="text-sm font-normal text-red-500">
+                  {errors.role.message}
+                </span>
+              )}
+            </fieldset>
 
             <label className="flex flex-col gap-2 text-sm font-medium text-neutral-700">
               Подтверждение пароля
