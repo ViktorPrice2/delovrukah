@@ -16,8 +16,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UseGuards } from '@nestjs/common';
 import { JwtPayload } from '../auth/jwt.strategy';
 import { AuthenticatedSocket, WsAuthGuard } from '../auth/ws-auth.guard';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 
 interface BroadcastOperator {
   emit(event: string, payload: unknown): void;
@@ -36,19 +34,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ordersService: OrdersService,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
   ) {}
 
   async handleConnection(client: AuthenticatedSocket): Promise<void> {
-    try {
-      console.log('[ChatGateway] handleConnection start', client.id);
-      const payload = await this.authenticateClient(client);
-      console.log('[ChatGateway] handleConnection success', client.id, payload.sub);
-    } catch (error) {
-      console.log('[ChatGateway] handleConnection error', client.id, error);
-      client.disconnect(true);
-    }
+    console.log('[ChatGateway] handleConnection', client.id);
   }
 
   handleDisconnect(client: AuthenticatedSocket): void {
@@ -61,7 +50,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { orderId?: string },
   ): Promise<{ room: string }> {
-    const user = await this.getAuthenticatedUser(client);
+    const user = this.getUserFromClient(client);
     const orderId = data?.orderId;
 
     if (!orderId) {
@@ -82,7 +71,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody()
     data: { orderId?: string; text?: string },
   ): Promise<ChatMessageResponseDto> {
-    const user = await this.getAuthenticatedUser(client);
+    const user = this.getUserFromClient(client);
     const orderId = data?.orderId;
     const trimmedText = data?.text?.trim();
 
@@ -118,69 +107,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return payload;
   }
 
-  private async getAuthenticatedUser(
-    client: AuthenticatedSocket,
-  ): Promise<JwtPayload> {
-    if (client.user) {
-      return client.user as JwtPayload;
-    }
-
-    return this.authenticateClient(client);
-  }
-
   private getRoomName(orderId: string): string {
     return `order-${orderId}`;
   }
 
-  private async authenticateClient(
-    client: AuthenticatedSocket,
-  ): Promise<JwtPayload> {
-    const token = this.extractToken(client);
-
-    if (!token) {
-      throw new WsException('Unauthorized');
+  private getUserFromClient(client: AuthenticatedSocket): JwtPayload {
+    if (client.user) {
+      return client.user as JwtPayload;
     }
 
-    const secret = this.configService.get<string>('JWT_SECRET');
-
-    if (!secret) {
-      throw new WsException('Server configuration error');
-    }
-
-    try {
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
-        secret,
-      });
-
-      client.user = payload;
-      return payload;
-    } catch (error) {
-      console.log('[ChatGateway] authenticateClient error', client.id, error);
-      throw new WsException('Unauthorized');
-    }
-  }
-
-  private extractToken(client: AuthenticatedSocket): string | null {
-    const authHeader = client.handshake.headers.authorization;
-
-    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
-      return authHeader.slice(7);
-    }
-
-    const tokenFromQuery = client.handshake.query?.token;
-
-    if (typeof tokenFromQuery === 'string') {
-      return tokenFromQuery;
-    }
-
-    const handshakeAuth = client.handshake.auth as
-      | { token?: unknown }
-      | undefined;
-
-    if (handshakeAuth && typeof handshakeAuth.token === 'string') {
-      return handshakeAuth.token;
-    }
-
-    return null;
+    throw new WsException('Unauthorized');
   }
 }
