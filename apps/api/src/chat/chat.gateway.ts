@@ -37,6 +37,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {}
 
   async handleConnection(client: AuthenticatedSocket): Promise<void> {
+    const token = this.extractToken(client);
+
+    if (token) {
+      client.handshake.headers.authorization = `Bearer ${token}`;
+    }
+
     console.log('[ChatGateway] handleConnection', client.id);
   }
 
@@ -109,6 +115,30 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private getRoomName(orderId: string): string {
     return `order-${orderId}`;
+  }
+
+  private extractToken(client: AuthenticatedSocket): string | null {
+    const auth = client.handshake.auth as { token?: unknown } | undefined;
+
+    if (auth && typeof auth.token === 'string') {
+      const trimmedToken = auth.token.trim();
+
+      if (trimmedToken) {
+        return trimmedToken;
+      }
+    }
+
+    const { authorization } = client.handshake.headers;
+
+    if (typeof authorization === 'string') {
+      const prefix = 'Bearer ';
+
+      if (authorization.startsWith(prefix)) {
+        return authorization.slice(prefix.length);
+      }
+    }
+
+    return null;
   }
 
   private getUserFromClient(client: AuthenticatedSocket): JwtPayload {
