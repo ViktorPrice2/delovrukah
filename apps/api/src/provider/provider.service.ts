@@ -124,7 +124,9 @@ export class ProviderService {
       throw new NotFoundException('Provider profile not found');
     }
 
-    const data: Prisma.ProviderProfileUpdateInput = {};
+    const data: (Prisma.ProviderProfileUpdateInput & {
+      hourlyRate?: Prisma.Decimal | null;
+    }) = {};
 
     if (dto.displayName !== undefined) {
       data.displayName = dto.displayName;
@@ -152,7 +154,7 @@ export class ProviderService {
         description: providerProfile.description ?? null,
         cityId: providerProfile.cityId ?? null,
         cityName: providerProfile.city?.name ?? null,
-        hourlyRate: providerProfile.hourlyRate?.toNumber() ?? null,
+        hourlyRate: this.normalizeHourlyRate(providerProfile),
         createdAt: providerProfile.createdAt,
         updatedAt: providerProfile.updatedAt,
       };
@@ -170,7 +172,7 @@ export class ProviderService {
       description: updatedProfile.description ?? null,
       cityId: updatedProfile.cityId ?? null,
       cityName: updatedProfile.city?.name ?? null,
-      hourlyRate: updatedProfile.hourlyRate?.toNumber() ?? null,
+      hourlyRate: this.normalizeHourlyRate(updatedProfile),
       createdAt: updatedProfile.createdAt,
       updatedAt: updatedProfile.updatedAt,
     };
@@ -274,9 +276,29 @@ export class ProviderService {
       description: providerProfile.description ?? null,
       cityId: providerProfile.cityId ?? null,
       cityName: providerProfile.city?.name ?? null,
-      hourlyRate: providerProfile.hourlyRate?.toNumber() ?? null,
+      hourlyRate: this.normalizeHourlyRate(providerProfile),
       createdAt: providerProfile.createdAt,
       updatedAt: providerProfile.updatedAt,
     };
+  }
+
+  private normalizeHourlyRate(provider: unknown): number | null {
+    if (!provider || typeof provider !== 'object') {
+      return null;
+    }
+
+    const { hourlyRate } = provider as {
+      hourlyRate?: Prisma.Decimal | number | null;
+    };
+
+    if (hourlyRate === undefined || hourlyRate === null) {
+      return null;
+    }
+
+    if (typeof hourlyRate === 'number') {
+      return hourlyRate;
+    }
+
+    return hourlyRate.toNumber();
   }
 }
