@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/app/store/auth.store";
+import { useNotificationsStore } from "@/app/store/notifications.store";
 import { useChat, type ChatMessage } from "@/app/hooks/useChat";
 
 import { OrderDetailsClient } from "./OrderDetailsClient";
@@ -30,12 +31,14 @@ interface RawChatMessage extends Partial<ChatMessage> {
 export default function OrderDetailsPage({ params }: OrderPageProps) {
   const { orderId } = use(params);
   const router = useRouter();
-  const { user, token, isLoading, decrementUnreadCount } = useAuth((state) => ({
+  const { user, token, isLoading } = useAuth((state) => ({
     user: state.user,
     token: state.token,
     isLoading: state.isLoading,
-    decrementUnreadCount: state.decrementUnreadCount,
   }));
+  const refreshNotifications = useNotificationsStore(
+    (state) => state.fetchNotifications,
+  );
 
   const {
     messages,
@@ -53,6 +56,8 @@ export default function OrderDetailsPage({ params }: OrderPageProps) {
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const readMessageIdsRef = useRef<Set<string>>(new Set());
+  const processingMessageIdsRef = useRef<Set<string>>(new Set());
+  const pendingMessageIdsRef = useRef<string[]>([]);
 
   const normalizeMessage = useCallback(
     (raw: RawChatMessage): ChatMessage => {
@@ -161,6 +166,8 @@ export default function OrderDetailsPage({ params }: OrderPageProps) {
 
   useEffect(() => {
     readMessageIdsRef.current = new Set();
+    processingMessageIdsRef.current = new Set();
+    pendingMessageIdsRef.current = [];
   }, [orderId]);
 
   useEffect(() => {
@@ -168,32 +175,67 @@ export default function OrderDetailsPage({ params }: OrderPageProps) {
       return;
     }
 
-    const unreadMessages = messages.filter(
-      (message) =>
-        message.senderId !== user.id &&
-        message.isRead === false &&
-        !readMessageIdsRef.current.has(message.id),
-    );
+    const unreadIds = messages
+      .filter(
+        (message) =>
+          message.senderId !== user.id &&
+          message.isRead === false &&
+          !readMessageIdsRef.current.has(message.id) &&
+          !processingMessageIdsRef.current.has(message.id),
+      )
+      .map((message) => message.id);
 
-    if (unreadMessages.length === 0) {
+    if (unreadIds.length === 0) {
       return;
     }
 
-    const unreadIds = unreadMessages.map((message) => message.id);
+    const uniqueUnreadIds = Array.from(
+      new Set([...pendingMessageIdsRef.current, ...unreadIds]),
+    );
+    pendingMessageIdsRef.current = uniqueUnreadIds;
 
-    const markMessages = async () => {
+    if (processingMessageIdsRef.current.size > 0) {
+      return;
+    }
+
+    const processUnreadMessages = async () => {
+      const batch = pendingMessageIdsRef.current;
+      pendingMessageIdsRef.current = [];
+
+      if (batch.length === 0) {
+        return;
+      }
+
+      batch.forEach((id) => processingMessageIdsRef.current.add(id));
+
       try {
-        await api.post(`/orders/${orderId}/messages/read`, { messageIds: unreadIds });
-        unreadIds.forEach((id) => readMessageIdsRef.current.add(id));
-        markMessagesAsReadLocally(unreadIds);
-        decrementUnreadCount(unreadIds.length);
+        await api.post(`/orders/${orderId}/messages/read`);
+        batch.forEach((id) => {
+          processingMessageIdsRef.current.delete(id);
+          readMessageIdsRef.current.add(id);
+        });
+        markMessagesAsReadLocally(batch);
+        await refreshNotifications();
       } catch (error) {
         console.error('Failed to mark messages as read', error);
+        batch.forEach((id) => {
+          processingMessageIdsRef.current.delete(id);
+        });
+      } finally {
+        if (pendingMessageIdsRef.current.length > 0) {
+          void processUnreadMessages();
+        }
       }
     };
 
-    void markMessages();
-  }, [messages, user?.id, orderId, markMessagesAsReadLocally, decrementUnreadCount]);
+    void processUnreadMessages();
+  }, [
+    messages,
+    user?.id,
+    orderId,
+    markMessagesAsReadLocally,
+    refreshNotifications,
+  ]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

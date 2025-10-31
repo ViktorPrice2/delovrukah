@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import CurrentCityDisplay from './CurrentCityDisplay';
 import { useAuth } from '../store/auth.store';
 import { useCartStore } from '../store/cart.store';
+import { useNotificationsStore } from '../store/notifications.store';
 
 function CartIcon() {
   return (
@@ -50,15 +51,83 @@ function MessagesIcon() {
 }
 
 export default function Header() {
-  const { user, isLoading, logout, unreadCount } = useAuth((state) => ({
+  const { user, isLoading, logout } = useAuth((state) => ({
     user: state.user,
     isLoading: state.isLoading,
     logout: state.logout,
-    unreadCount: state.unreadCount,
+  }));
+  const { summary, fetchNotifications } = useNotificationsStore((state) => ({
+    summary: state.data,
+    fetchNotifications: state.fetchNotifications,
   }));
   const cartCount = useCartStore((state) =>
     state.items.reduce((total, item) => total + item.quantity, 0),
   );
+
+  const [isDropdownExpanded, setIsDropdownExpanded] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  const isDropdownOpen = Boolean(user) && isDropdownExpanded;
+
+  const closeDropdown = useCallback(() => {
+    setIsDropdownExpanded(false);
+  }, []);
+
+  const toggleDropdown = useCallback(() => {
+    if (!user) {
+      return;
+    }
+
+    setIsDropdownExpanded((prev) => !prev);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || summary) {
+      return;
+    }
+
+    void fetchNotifications();
+  }, [user, summary, fetchNotifications]);
+
+  useEffect(() => {
+    if (!isDropdownOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        dropdownRef.current?.contains(target) ||
+        triggerRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      closeDropdown();
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeDropdown();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isDropdownOpen, closeDropdown]);
+
+  const notificationsSummary = summary ?? {
+    totalUnreadCount: 0,
+    ordersWithUnread: [],
+  };
+  const totalUnreadCount = notificationsSummary.totalUnreadCount;
+  const ordersWithUnread = notificationsSummary.ordersWithUnread;
 
   const profileHref = useMemo(() => {
     if (!user) {
@@ -79,21 +148,91 @@ export default function Header() {
           <CurrentCityDisplay />
         </div>
         <nav className="flex items-center gap-3 text-sm font-medium">
-          <Link
-            href={user ? '/orders' : '/signin'}
-            className="relative inline-flex items-center gap-2 rounded-md border border-transparent px-3 py-2 transition hover:border-slate-200 hover:bg-slate-100"
-            aria-label="Сообщения"
-          >
-            <span className="relative inline-flex items-center">
-              <MessagesIcon />
-              {user && unreadCount > 0 ? (
-                <span className="absolute -right-2 -top-2 inline-flex min-h-[1.25rem] min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1 text-[0.625rem] font-semibold leading-none text-white">
-                  {unreadCount > 99 ? '99+' : unreadCount}
+          {user ? (
+            <div className="relative">
+              <button
+                ref={triggerRef}
+                type="button"
+                onClick={toggleDropdown}
+                className="relative inline-flex items-center gap-2 rounded-md border border-transparent px-3 py-2 transition hover:border-slate-200 hover:bg-slate-100"
+                aria-label="Сообщения"
+                aria-haspopup="true"
+                aria-expanded={isDropdownOpen}
+              >
+                <span className="relative inline-flex items-center">
+                  <MessagesIcon />
+                  {totalUnreadCount > 0 ? (
+                    <span className="absolute -right-2 -top-2 inline-flex min-h-[1.25rem] min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1 text-[0.625rem] font-semibold leading-none text-white">
+                      {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                    </span>
+                  ) : null}
                 </span>
+                <span className="hidden sm:inline">Сообщения</span>
+              </button>
+
+              {isDropdownOpen ? (
+                <div
+                  ref={dropdownRef}
+                  className="absolute right-0 z-20 mt-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg"
+                >
+                  <div className="border-b border-slate-100 px-4 py-3">
+                    <p className="text-sm font-medium text-slate-700">
+                      Всего непрочитанных:{' '}
+                      <span className="font-semibold text-slate-900">
+                        {totalUnreadCount}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {ordersWithUnread.length > 0 ? (
+                      <ul className="divide-y divide-slate-100">
+                        {ordersWithUnread.map((order) => (
+                          <li key={order.orderId}>
+                            <Link
+                              href={`/orders/${order.orderId}`}
+                              className="flex items-center justify-between gap-3 px-4 py-3 text-sm transition hover:bg-slate-50"
+                              onClick={closeDropdown}
+                            >
+                              <span className="font-medium text-slate-800">
+                                {order.orderNumber}
+                              </span>
+                              <span className="inline-flex min-w-[2rem] justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                                {order.unreadInOrder}
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="px-4 py-3 text-sm text-slate-500">
+                        Нет непрочитанных сообщений
+                      </p>
+                    )}
+                  </div>
+                  <div className="border-t border-slate-100 bg-slate-50 px-4 py-2 text-right">
+                    <Link
+                      href="/orders"
+                      className="text-sm font-medium text-indigo-600 transition hover:text-indigo-500"
+                      onClick={closeDropdown}
+                    >
+                      Все чаты
+                    </Link>
+                  </div>
+                </div>
               ) : null}
-            </span>
-            <span className="hidden sm:inline">Сообщения</span>
-          </Link>
+            </div>
+          ) : (
+            <Link
+              href="/signin"
+              className="relative inline-flex items-center gap-2 rounded-md border border-transparent px-3 py-2 transition hover:border-slate-200 hover:bg-slate-100"
+              aria-label="Сообщения"
+            >
+              <span className="relative inline-flex items-center">
+                <MessagesIcon />
+              </span>
+              <span className="hidden sm:inline">Сообщения</span>
+            </Link>
+          )}
           <Link
             href="/checkout"
             className="relative inline-flex items-center gap-2 rounded-md border border-transparent px-3 py-2 transition hover:border-slate-200 hover:bg-slate-100"

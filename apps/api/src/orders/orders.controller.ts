@@ -63,20 +63,11 @@ export class OrdersController {
   }
 
   @Roles(Role.CUSTOMER, Role.PROVIDER)
-  @Post(':id/messages/read')
+  @Post(':orderId/messages/read')
   markMessagesAsRead(
     @Req() req: RequestWithUser,
-    @Param('id') id: string,
-    @Body('messageIds') messageIds: string[],
+    @Param('orderId') orderId: string,
   ): Promise<ChatMessageResponseDto[]> {
-    const ids = Array.isArray(messageIds)
-      ? messageIds.filter((value): value is string => typeof value === 'string')
-      : [];
-
-    return this.ordersService.markMessagesAsRead(
-      req.user.sub,
-      id,
-      ids,
-    );
+    return this.ordersService.markMessagesAsRead(req.user.sub, orderId);
   }
 }

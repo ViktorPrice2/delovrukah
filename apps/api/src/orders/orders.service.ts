@@ -261,20 +261,29 @@ export class OrdersService {
   async markMessagesAsRead(
     userId: string,
     orderId: string,
-    messageIds: string[],
   ): Promise<ChatMessageResponseDto[]> {
-    if (messageIds.length === 0) {
-      return [];
-    }
-
-    const uniqueMessageIds = Array.from(new Set(messageIds));
-
     const context = await this.getUserContext(userId);
     await this.findAuthorizedOrder(context, orderId);
 
+    const unreadMessages = await this.prisma.chatMessage.findMany({
+      where: {
+        orderId,
+        isRead: false,
+        NOT: { senderId: userId },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: chatMessageSelect,
+    });
+
+    if (unreadMessages.length === 0) {
+      return [];
+    }
+
+    const unreadIds = unreadMessages.map((message) => message.id);
+
     await this.prisma.chatMessage.updateMany({
       where: {
-        id: { in: uniqueMessageIds },
+        id: { in: unreadIds },
         orderId,
         isRead: false,
         NOT: { senderId: userId },
@@ -282,17 +291,13 @@ export class OrdersService {
       data: { isRead: true },
     });
 
-    const messages = await this.prisma.chatMessage.findMany({
-      where: {
-        id: { in: uniqueMessageIds },
-        orderId,
-        NOT: { senderId: userId },
-      },
+    const updatedMessages = await this.prisma.chatMessage.findMany({
+      where: { id: { in: unreadIds } },
       orderBy: { createdAt: 'asc' },
       select: chatMessageSelect,
     });
 
-    return messages.map((message) => mapChatMessageResponse(message));
+    return updatedMessages.map((message) => mapChatMessageResponse(message));
   }
 
   private mapPrices(prices: Price[]): Map<string, Price> {
