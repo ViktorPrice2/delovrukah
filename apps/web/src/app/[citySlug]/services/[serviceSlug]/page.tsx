@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 // Используем наш централизованный API-клиент
-import { getServiceDetailsBySlug } from "@/app/lib/catalog-api"; 
+import { getServiceDetailsBySlug } from "@/app/lib/catalog-api";
 // Предполагается, что в catalog-api.ts будет такая функция
 // И типы будут импортироваться оттуда же или из types/catalog.types.ts
-import type { ServiceDetail } from "@/app/types/catalog.types"; 
+import type { ServiceDetail } from "@/app/types/catalog.types";
+import { AddToCartButton } from "./AddToCartButton";
 
 export const dynamic = "force-dynamic";
 
@@ -102,16 +103,24 @@ export default async function ServicePage({ params, searchParams }: ServicePageP
         {providers.length > 0 ? (
           <ul className="space-y-4">
             {providers.map((provider) => (
-              <li key={provider.id} className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 transition hover:shadow-md">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  <div className="font-medium">{provider.displayName}</div>
-                  <div className="text-lg font-bold whitespace-nowrap">
-                    {provider.price.toLocaleString('ru-RU')} ₽
+              <li
+                key={provider.id}
+                className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 transition hover:shadow-md"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-2">
+                    <div className="text-base font-semibold">{provider.displayName}</div>
+                    {provider.description && (
+                      <p className="text-sm text-muted-foreground">{provider.description}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-2 sm:items-end">
+                    <div className="text-lg font-bold whitespace-nowrap">
+                      {provider.price.toLocaleString('ru-RU')} ₽
+                    </div>
+                    <AddToCartButton service={service} provider={provider} />
                   </div>
                 </div>
-                {provider.description && (
-                  <p className="mt-2 text-sm text-muted-foreground">{provider.description}</p>
-                )}
               </li>
             ))}
           </ul>
