@@ -24,8 +24,10 @@ export default function CitySelector({ initialCities, error }: CitySelectorProps
     // Используем startTransition для плавного перехода без блокировки UI
     startTransition(() => {
       if (value) {
+        window.localStorage.setItem("selectedCitySlug", value);
         router.push(`/${value}`);
       } else {
+        window.localStorage.removeItem("selectedCitySlug");
         router.push("/"); // Если выбрали "Все города", переходим на главную
       }
     });

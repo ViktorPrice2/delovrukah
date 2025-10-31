@@ -1,7 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+
+const RESERVED_ROUTES = new Set([
+  "checkout",
+  "orders",
+  "profile",
+  "signin",
+  "signup",
+]);
+
+const STORAGE_KEY = "selectedCitySlug";
 
 function formatCitySlug(slug: string): string {
   return slug
@@ -12,12 +22,37 @@ function formatCitySlug(slug: string): string {
 
 export default function CurrentCityDisplay() {
   const pathname = usePathname();
+  const [citySlug, setCitySlug] = useState<string | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
 
-  const citySlug = useMemo(() => {
-    return pathname
-      .split("/")
-      .filter(Boolean)
-      .at(0);
+    const segments = window.location.pathname.split("/").filter(Boolean);
+    const potentialCity = segments.at(0);
+
+    if (potentialCity && !RESERVED_ROUTES.has(potentialCity)) {
+      return potentialCity;
+    }
+
+    return window.localStorage.getItem(STORAGE_KEY);
+  });
+
+  useEffect(() => {
+    const segments = pathname.split("/").filter(Boolean);
+    const potentialCity = segments.at(0);
+
+    if (potentialCity && !RESERVED_ROUTES.has(potentialCity)) {
+      startTransition(() => {
+        setCitySlug(potentialCity);
+      });
+      window.localStorage.setItem(STORAGE_KEY, potentialCity);
+      return;
+    }
+
+    const storedCity = window.localStorage.getItem(STORAGE_KEY);
+    startTransition(() => {
+      setCitySlug(storedCity);
+    });
   }, [pathname]);
 
   if (!citySlug) {
