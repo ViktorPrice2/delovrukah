@@ -22,22 +22,13 @@ function formatCitySlug(slug: string): string {
 
 export default function CurrentCityDisplay() {
   const pathname = usePathname();
-  const [citySlug, setCitySlug] = useState<string | null>(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    const segments = window.location.pathname.split("/").filter(Boolean);
-    const potentialCity = segments.at(0);
-
-    if (potentialCity && !RESERVED_ROUTES.has(potentialCity)) {
-      return potentialCity;
-    }
-
-    return window.localStorage.getItem(STORAGE_KEY);
-  });
+  const [citySlug, setCitySlug] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
     const segments = pathname.split("/").filter(Boolean);
     const potentialCity = segments.at(0);
 
