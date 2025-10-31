@@ -19,6 +19,11 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "typeRoots": ["../../node_modules/@types"],
-    "types": ["node", "jest"] // <--- ВОТ ПРАВИЛЬНОЕ РЕШЕНИЕ
+    "types": ["node", "jest"], // <--- ВОТ ПРАВИЛЬНОЕ РЕШЕНИЕ
+    "paths": {
+      "@nestjs/websockets": ["src/stubs/nestjs-websockets"],
+      "@nestjs/websockets/*": ["src/stubs/nestjs-websockets"],
+      "socket.io": ["src/stubs/socket.io"]
+    }
   }
 }
