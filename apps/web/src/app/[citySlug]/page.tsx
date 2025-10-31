@@ -14,11 +14,13 @@ type CityPageProps = {
 };
 
 export async function generateMetadata({ params }: CityPageProps): Promise<Metadata> {
-  const { citySlug } = params;
-  
+  const citySlug = params?.citySlug ?? "";
+
   // Мы не можем легко получить имя города здесь без отдельного запроса,
   // поэтому генерируем title на основе слага. Это надежнее.
-  const cityName = citySlug.charAt(0).toUpperCase() + citySlug.slice(1);
+  const cityName = citySlug
+    ? citySlug.charAt(0).toUpperCase() + citySlug.slice(1)
+    : "Город";
 
   return {
     title: `Услуги в городе ${cityName} — категории | Delovrukah.ru`,
@@ -28,7 +30,12 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
 
 export default async function CityPage({ params }: CityPageProps) {
   // --- НАЧАЛО ИЗМЕНЕНИЙ В ЛОГИКЕ ---
-  const { citySlug } = params;
+  const citySlug = params?.citySlug;
+
+  if (!citySlug) {
+    console.warn("[SSR] citySlug не передан, вызываю notFound()");
+    notFound();
+  }
 
   console.log(`[SSR] Запрашиваю категории для города: ${citySlug}`);
   // Делаем ОДИН запрос, чтобы получить все категории для этого города
