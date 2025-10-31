@@ -14,7 +14,7 @@ type CategoryPageParams = {
 };
 
 type CategoryPageProps = {
-  params: Promise<CategoryPageParams>;
+  params: CategoryPageParams | Promise<CategoryPageParams>;
 };
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
