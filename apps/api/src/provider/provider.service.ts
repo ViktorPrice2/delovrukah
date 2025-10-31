@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CatalogService } from '../catalog/catalog.service';
@@ -10,12 +10,21 @@ import { UpdateProviderPricesDto } from './dto/update-prices.dto';
 
 @Injectable()
 export class ProviderService {
+  private readonly logger = new Logger(ProviderService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly catalogService: CatalogService,
   ) {}
 
   async getProviderPrices(userId: string): Promise<ProviderPriceDto[]> {
+    if (!this.prisma.isDatabaseAvailable) {
+      this.logger.warn(
+        'Database is unavailable. Unable to load provider prices. Returning empty result.',
+      );
+      return [];
+    }
+
     const providerProfile = await this.prisma.providerProfile.findUnique({
       where: { userId },
       include: { city: true },
@@ -42,6 +51,13 @@ export class ProviderService {
   async getProviderCatalog(
     userId: string,
   ): Promise<ProviderCatalogCategoryDto[]> {
+    if (!this.prisma.isDatabaseAvailable) {
+      this.logger.warn(
+        'Database is unavailable. Provider catalog cannot be loaded. Returning empty catalog.',
+      );
+      return [];
+    }
+
     const providerProfile = await this.prisma.providerProfile.findUnique({
       where: { userId },
       include: { city: true },
@@ -115,6 +131,13 @@ export class ProviderService {
     userId: string,
     dto: UpdateProfileDto,
   ): Promise<ProviderProfileDto> {
+    if (!this.prisma.isDatabaseAvailable) {
+      this.logger.warn(
+        'Database is unavailable. Provider profile update cannot be processed.',
+      );
+      throw new NotFoundException('Provider profile not found');
+    }
+
     const providerProfile = await this.prisma.providerProfile.findUnique({
       where: { userId },
       include: { city: true },
@@ -182,6 +205,13 @@ export class ProviderService {
     userId: string,
     dto: UpdateProviderPricesDto,
   ): Promise<ProviderPriceDto[]> {
+    if (!this.prisma.isDatabaseAvailable) {
+      this.logger.warn(
+        'Database is unavailable. Provider prices cannot be updated.',
+      );
+      throw new NotFoundException('Provider profile not found');
+    }
+
     const providerProfile = await this.prisma.providerProfile.findUnique({
       where: { userId },
     });
@@ -261,6 +291,13 @@ export class ProviderService {
   }
 
   async getProfile(userId: string): Promise<ProviderProfileDto> {
+    if (!this.prisma.isDatabaseAvailable) {
+      this.logger.warn(
+        'Database is unavailable. Returning provider profile as not found.',
+      );
+      throw new NotFoundException('Provider profile not found');
+    }
+
     const providerProfile = await this.prisma.providerProfile.findUnique({
       where: { userId },
       include: { city: true },
