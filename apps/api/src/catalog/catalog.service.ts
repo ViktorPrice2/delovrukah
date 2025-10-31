@@ -325,9 +325,29 @@ export class CatalogService {
       description: provider.description ?? null,
       price: price.toNumber(),
       city: this.mapCity(provider.city),
-      hourlyRate: provider.hourlyRate ? provider.hourlyRate.toNumber() : null,
+      hourlyRate: this.extractHourlyRate(provider),
       estimatedTime,
     };
+  }
+
+  private extractHourlyRate(provider: unknown): number | null {
+    if (!provider || typeof provider !== 'object') {
+      return null;
+    }
+
+    const { hourlyRate } = provider as {
+      hourlyRate?: Prisma.Decimal | number | null;
+    };
+
+    if (hourlyRate === undefined || hourlyRate === null) {
+      return null;
+    }
+
+    if (typeof hourlyRate === 'number') {
+      return hourlyRate;
+    }
+
+    return hourlyRate.toNumber();
   }
 
   private mapCity(city: City): CityDto {
