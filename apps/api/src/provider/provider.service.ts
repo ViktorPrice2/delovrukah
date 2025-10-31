@@ -113,6 +113,7 @@ export class ProviderService {
   ): Promise<ProviderProfileDto> {
     const providerProfile = await this.prisma.providerProfile.findUnique({
       where: { userId },
+      include: { city: true },
     });
 
     if (!providerProfile) {
