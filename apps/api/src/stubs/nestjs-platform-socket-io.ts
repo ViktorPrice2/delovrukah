@@ -29,6 +29,10 @@ export class IoAdapter implements WebSocketAdapter<Server, Socket> {
     return new Server();
   }
 
+  createIOServer(_port: number, _options?: unknown): Server {
+    return new Server();
+  }
+
   bindClientConnect(server: Server, callback: Function): void {
     server.on('connection', callback as (client: Socket) => void);
   }
