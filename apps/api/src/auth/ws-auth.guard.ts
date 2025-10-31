@@ -1,4 +1,6 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
 import { JwtPayload } from './jwt.strategy';
 
@@ -54,7 +56,14 @@ function assertAuthenticatedSocket(client: unknown): asserts client is Authentic
 
 @Injectable()
 export class WsAuthGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
+  private readonly logger = new Logger(WsAuthGuard.name);
+
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const client = context.switchToWs().getClient<unknown>();
 
     assertAuthenticatedSocket(client);
@@ -63,6 +72,57 @@ export class WsAuthGuard implements CanActivate {
       return true;
     }
 
-    throw new WsException('Unauthorized');
+    const token = this.extractToken(client);
+
+    if (!token) {
+      throw new WsException('Unauthorized');
+    }
+
+    const secret = this.configService.get<string>('JWT_SECRET');
+
+    if (!secret) {
+      this.logger.error('JWT_SECRET is not configured');
+      throw new WsException('Server configuration error');
+    }
+
+    try {
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
+        secret,
+      });
+
+      client.user = payload;
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown verification error';
+      this.logger.debug(
+        `Failed to authenticate websocket client ${client.id}: ${message}`,
+      );
+      throw new WsException('Unauthorized');
+    }
+  }
+
+  private extractToken(client: AuthenticatedSocket): string | null {
+    const authHeader = client.handshake.headers.authorization;
+
+    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      return authHeader.slice(7);
+    }
+
+    const tokenFromQuery = client.handshake.query?.token;
+
+    if (typeof tokenFromQuery === 'string') {
+      return tokenFromQuery;
+    }
+
+    const handshakeAuth = client.handshake.auth as
+      | { token?: unknown }
+      | undefined;
+
+    if (handshakeAuth && typeof handshakeAuth.token === 'string') {
+      return handshakeAuth.token;
+    }
+
+    return null;
   }
 }
