@@ -52,6 +52,7 @@ model ProviderProfile {
   prices       Price[]
   keptServices ServiceTemplate[]     @relation("KeptServices") // <-- Связь для Хранителя
   orderItems   OrderItem[]
+  hourlyRate   Decimal?              @db.Decimal(10, 2)
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
 

@@ -9,12 +9,14 @@ export interface ProviderProfile {
   description: string | null;
   cityId: string | number | null;
   cityName?: string | null;
+  hourlyRate: number | null;
 }
 
 interface UpdateProfilePayload {
   displayName: string;
   description: string;
   cityId: string;
+  hourlyRate: number | null;
 }
 
 interface ProviderStoreState {
@@ -91,7 +93,14 @@ export const useProviderStore = create<ProviderStoreState>((set) => ({
     set({ isUpdating: true, error: undefined });
     try {
       const response = await api.put<ProviderProfile>('/provider/profile', payload);
-      const profile = response.data ?? { ...payload };
+      const profile =
+        response.data ??
+        {
+          ...payload,
+          id: undefined,
+          description: payload.description ?? null,
+          cityName: undefined,
+        };
       set({ profile, isUpdating: false, error: undefined });
       try {
         await useAuth.getState().fetchUser();

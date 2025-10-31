@@ -25,6 +25,8 @@ export interface Provider {
   displayName: string;
   description: string | null;
   price: number;
+  hourlyRate: number | null;
+  estimatedTime: string | null;
   city: City;
 }
 

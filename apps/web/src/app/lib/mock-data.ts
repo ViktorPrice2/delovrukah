@@ -53,13 +53,20 @@ const ELECTRICAL_SERVICE_VERSION: ServiceVersion = {
   updatedAt: "2024-01-10T10:00:00.000Z",
 };
 
-const NOVOSIBIRSK_PROVIDER_PROFILES: Array<Pick<Provider, "id" | "displayName" | "description" | "price">> = [
+const NOVOSIBIRSK_PROVIDER_PROFILES: Array<
+  Pick<Provider, "id" | "displayName" | "description" | "price"> & {
+    hourlyRate?: number;
+    estimatedTime?: string | null;
+  }
+> = [
   {
     id: "provider-nsk-01",
     displayName: "ИП Иванов А.А.",
     description:
       "Опыт более 10 лет. Диагностика электропроводки в квартирах и коттеджах, подробный отчет о состоянии линий.",
     price: 2500,
+    hourlyRate: 1800,
+    estimatedTime: "1.5 часа",
   },
   {
     id: "provider-nsk-02",
@@ -67,6 +74,8 @@ const NOVOSIBIRSK_PROVIDER_PROFILES: Array<Pick<Provider, "id" | "displayName" |
     description:
       "Диагностика электросетей с выдачей технического заключения и рекомендациями по ремонту.",
     price: 3200,
+    hourlyRate: 2100,
+    estimatedTime: "2 часа",
   },
   {
     id: "provider-nsk-03",
@@ -74,113 +83,151 @@ const NOVOSIBIRSK_PROVIDER_PROFILES: Array<Pick<Provider, "id" | "displayName" |
     description:
       "Срочные выезды в течение дня, проверка автоматов и тепловизионный контроль нагрева линий.",
     price: 2800,
+    hourlyRate: 1950,
+    estimatedTime: "90 минут",
   },
   {
     id: "provider-nsk-04",
     displayName: "MasterVolt Новосибирск",
     description: "Проверка электросети с измерением сопротивления изоляции и составлением акта.",
     price: 3100,
+    hourlyRate: 2050,
+    estimatedTime: "2.5 часа",
   },
   {
     id: "provider-nsk-05",
     displayName: "ЭлектроПрофи 54",
     description: "Комплексная диагностика с проверкой УЗО и рекомендациями по модернизации щита.",
     price: 2950,
+    hourlyRate: 2000,
+    estimatedTime: "2 часа",
   },
   {
     id: "provider-nsk-06",
     displayName: "Заводской электрик",
     description: "Опыт работы на промышленных объектах, анализ нагрузки и выявление просадок напряжения.",
     price: 3400,
+    hourlyRate: 2300,
+    estimatedTime: "3 часа",
   },
   {
     id: "provider-nsk-07",
     displayName: "ЭнергоДиагностика",
     description: "Измерение сопротивления контура заземления, проверка кабельных линий и розеточных групп.",
     price: 3600,
+    hourlyRate: 2350,
+    estimatedTime: "3.5 часа",
   },
   {
     id: "provider-nsk-08",
     displayName: "ТехЭнерго Сервис",
     description: "Профилактика электрических сетей в офисах и квартирах, выдача подробного заключения.",
     price: 3300,
+    hourlyRate: 2150,
+    estimatedTime: "2.5 часа",
   },
   {
     id: "provider-nsk-09",
     displayName: "ЭлектроЛаб",
     description: "Диагностика с использованием лабораторного оборудования и фотоотчетом проблемных зон.",
     price: 3550,
+    hourlyRate: 2400,
+    estimatedTime: "3 часа",
   },
   {
     id: "provider-nsk-10",
     displayName: "Комфорт-Сеть",
     description: "Проверка скрытой проводки, поиск повреждений и рекомендации по улучшению безопасности.",
     price: 2700,
+    hourlyRate: 1850,
+    estimatedTime: "1.5 часа",
   },
   {
     id: "provider-nsk-11",
     displayName: "СветоТест",
     description: "Наладка осветительных линий, тестирование выключателей и измерение утечки тока.",
     price: 2600,
+    hourlyRate: 1750,
+    estimatedTime: "80 минут",
   },
   {
     id: "provider-nsk-12",
     displayName: "ИП Смирнова Е.В.",
     description: "Диагностика для квартир перед сдачей в аренду, рекомендации по распределению нагрузки.",
     price: 2450,
+    hourlyRate: 1700,
+    estimatedTime: "75 минут",
   },
   {
     id: "provider-nsk-13",
     displayName: "ЭлектроФокус",
     description: "Проверка стабилизаторов и тёплых полов, замеры напряжения по фазам, консультации по оборудованию.",
     price: 3150,
+    hourlyRate: 2080,
+    estimatedTime: "2.3 часа",
   },
   {
     id: "provider-nsk-14",
     displayName: "БликЭнерго",
     description: "Диагностика квартир в новостройках, поиск монтажных ошибок, помощь в гарантийных обращениях.",
     price: 3000,
+    hourlyRate: 2020,
+    estimatedTime: "2 часа",
   },
   {
     id: "provider-nsk-15",
     displayName: "Сеть+",
     description: "Комплексная проверка электропроводки с нагрузочными испытаниями и маркировкой линий.",
     price: 2900,
+    hourlyRate: 1980,
+    estimatedTime: "2 часа",
   },
   {
     id: "provider-nsk-16",
     displayName: "Диагностика и безопасность",
     description: "Проверка систем заземления, автоматов и УЗО в частных домах, выдача технического заключения.",
     price: 3700,
+    hourlyRate: 2450,
+    estimatedTime: "3.5 часа",
   },
   {
     id: "provider-nsk-17",
     displayName: "ЭнергоПульт",
     description: "Термовизионная диагностика электрощитов, составление плана модернизации.",
     price: 3500,
+    hourlyRate: 2380,
+    estimatedTime: "3 часа",
   },
   {
     id: "provider-nsk-18",
     displayName: "Электрика Гарант",
     description: "Комплексная проверка проводки в домах после ремонта, консультация по распределению нагрузки.",
     price: 3050,
+    hourlyRate: 2060,
+    estimatedTime: "2.2 часа",
   },
   {
     id: "provider-nsk-19",
     displayName: "ПрофСеть Инжиниринг",
     description: "Диагностика коммерческих помещений, проверка автоматизации и систем освещения.",
     price: 3850,
+    hourlyRate: 2550,
+    estimatedTime: "4 часа",
   },
   {
     id: "provider-nsk-20",
     displayName: "NovaGrid",
     description: "Сервисное сопровождение электросетей, регулярный мониторинг состояния и фотофиксация.",
     price: 4100,
+    hourlyRate: 2650,
+    estimatedTime: "4.5 часа",
   },
 ];
 
 const NOVOSIBIRSK_PROVIDERS: Provider[] = NOVOSIBIRSK_PROVIDER_PROFILES.map((profile) => ({
   ...profile,
+  hourlyRate: typeof profile.hourlyRate === "number" ? profile.hourlyRate : 2000,
+  estimatedTime: profile.estimatedTime ?? "2 часа",
   city: NOVOSIBIRSK_CITY,
 }));
 
