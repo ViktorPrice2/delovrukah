@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import type { ProviderPriceCategory } from '@/app/store/provider.store';
 
 export interface ProviderPriceUpdatePayload {
-  serviceId: string;
+  serviceTemplateVersionId: string;
   price: number | null;
 }
 
@@ -60,13 +60,13 @@ export function PriceManagementForm({
   const submitHandler = handleSubmit(async () => {
     const currentValues = getValues();
     const dirtyEntries = Object.entries(dirtyFields) as Array<[string, boolean]>;
-    const updates = dirtyEntries.reduce<ProviderPriceUpdatePayload[]>((acc, [serviceId, isFieldDirty]) => {
+    const updates = dirtyEntries.reduce<ProviderPriceUpdatePayload[]>((acc, [serviceVersionId, isFieldDirty]) => {
       if (!isFieldDirty) {
         return acc;
       }
 
-      const value = currentValues[serviceId] ?? '';
-      const initialValue = fieldValues[serviceId] ?? '';
+      const value = currentValues[serviceVersionId] ?? '';
+      const initialValue = fieldValues[serviceVersionId] ?? '';
 
       const normalizedValue = value === '' ? null : Number(value);
       if (normalizedValue !== null && Number.isNaN(normalizedValue)) {
@@ -78,7 +78,7 @@ export function PriceManagementForm({
         return acc;
       }
 
-      acc.push({ serviceId, price: normalizedValue });
+      acc.push({ serviceTemplateVersionId: serviceVersionId, price: normalizedValue });
       return acc;
     }, []);
 

@@ -5,7 +5,7 @@ import { ProviderCatalogCategoryDto } from './dto/provider-catalog.dto';
 import { ProviderPriceDto } from './dto/provider-price.dto';
 import { ProviderProfileDto } from './dto/provider-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UpsertPriceDto } from './dto/upsert-price.dto';
+import { UpdateProviderPricesDto } from './dto/update-prices.dto';
 
 @Injectable()
 export class ProviderService {
@@ -164,10 +164,10 @@ export class ProviderService {
     };
   }
 
-  async upsertPrice(
+  async upsertPrices(
     userId: string,
-    dto: UpsertPriceDto,
-  ): Promise<ProviderPriceDto> {
+    dto: UpdateProviderPricesDto,
+  ): Promise<ProviderPriceDto[]> {
     const providerProfile = await this.prisma.providerProfile.findUnique({
       where: { userId },
     });
@@ -176,30 +176,52 @@ export class ProviderService {
       throw new NotFoundException('Provider profile not found');
     }
 
-    const decimalPrice = new Prisma.Decimal(dto.price);
+    const updates = await this.prisma.$transaction(async (tx) => {
+      const results: ProviderPriceDto[] = [];
 
-    const price = await this.prisma.price.upsert({
-      where: {
-        providerProfileId_serviceTemplateVersionId: {
-          providerProfileId: providerProfile.id,
-          serviceTemplateVersionId: dto.serviceTemplateVersionId,
-        },
-      },
-      update: { price: decimalPrice },
-      create: {
-        providerProfileId: providerProfile.id,
-        serviceTemplateVersionId: dto.serviceTemplateVersionId,
-        price: decimalPrice,
-      },
+      for (const priceUpdate of dto.prices) {
+        const { serviceTemplateVersionId, price } = priceUpdate;
+
+        if (price === null || price === undefined) {
+          await tx.price.deleteMany({
+            where: {
+              providerProfileId: providerProfile.id,
+              serviceTemplateVersionId,
+            },
+          });
+          continue;
+        }
+
+        const decimalPrice = new Prisma.Decimal(price);
+
+        const upsertedPrice = await tx.price.upsert({
+          where: {
+            providerProfileId_serviceTemplateVersionId: {
+              providerProfileId: providerProfile.id,
+              serviceTemplateVersionId,
+            },
+          },
+          update: { price: decimalPrice },
+          create: {
+            providerProfileId: providerProfile.id,
+            serviceTemplateVersionId,
+            price: decimalPrice,
+          },
+        });
+
+        results.push({
+          id: upsertedPrice.id,
+          serviceTemplateVersionId: upsertedPrice.serviceTemplateVersionId,
+          price: upsertedPrice.price.toNumber(),
+          createdAt: upsertedPrice.createdAt,
+          updatedAt: upsertedPrice.updatedAt,
+        });
+      }
+
+      return results;
     });
 
-    return {
-      id: price.id,
-      serviceTemplateVersionId: price.serviceTemplateVersionId,
-      price: price.price.toNumber(),
-      createdAt: price.createdAt,
-      updatedAt: price.updatedAt,
-    };
+    return updates;
   }
 
   async getProfile(userId: string): Promise<ProviderProfileDto> {
