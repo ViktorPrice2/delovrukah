@@ -23,6 +23,7 @@
     "paths": {
       "@nestjs/websockets": ["src/stubs/nestjs-websockets"],
       "@nestjs/websockets/*": ["src/stubs/nestjs-websockets"],
+      "@nestjs/platform-socket.io": ["src/stubs/nestjs-platform-socket-io"],
       "socket.io": ["src/stubs/socket.io"]
     }
   }

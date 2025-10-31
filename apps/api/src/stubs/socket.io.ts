@@ -44,13 +44,18 @@ export interface BroadcastOperator {
   emit(event: string, payload: unknown): void;
 }
 
-export class Server {
+export class Server extends EventEmitter {
   private readonly sockets = new Set<Socket>();
   private readonly rooms = new Map<string, Set<Socket>>();
+
+  constructor() {
+    super();
+  }
 
   createSocket(handshake?: Partial<HandshakeData>): Socket {
     const socket = new Socket(this, handshake);
     this.sockets.add(socket);
+    this.emit('connection', socket);
     return socket;
   }
 
@@ -93,5 +98,14 @@ export class Server {
         }
       },
     };
+  }
+
+  close(): void {
+    for (const socket of Array.from(this.sockets)) {
+      socket.removeAllListeners();
+    }
+    this.sockets.clear();
+    this.rooms.clear();
+    this.removeAllListeners();
   }
 }
