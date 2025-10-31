@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios';
 import { create } from 'zustand';
 import { api } from '@/lib/api';
 
@@ -29,6 +30,24 @@ interface ProviderStoreState {
   fetchPriceCatalog: () => Promise<void>;
 }
 
+interface ProviderCatalogServiceVersionResponse {
+  id: string;
+  title: string;
+  providerPrice?: number | null;
+}
+
+interface ProviderCatalogServiceResponse {
+  id: string;
+  name: string;
+  latestVersion: ProviderCatalogServiceVersionResponse | null;
+}
+
+interface ProviderCatalogCategoryResponse {
+  id: string;
+  name: string;
+  services: ProviderCatalogServiceResponse[];
+}
+
 export interface ProviderPriceService {
   id: string;
   name: string;
@@ -57,6 +76,12 @@ export const useProviderStore = create<ProviderStoreState>((set) => ({
       const response = await api.get<ProviderProfile>('/provider/profile');
       set({ profile: response.data, isLoading: false, error: undefined });
     } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 404) {
+        console.info('Provider profile not found, skipping');
+        set({ profile: undefined, isLoading: false, error: undefined });
+        return;
+      }
+
       console.error('Failed to load provider profile', error);
       set({ error: 'Не удалось загрузить профиль', isLoading: false });
     }
@@ -77,8 +102,36 @@ export const useProviderStore = create<ProviderStoreState>((set) => ({
   fetchPriceCatalog: async () => {
     set({ isPriceCatalogLoading: true, priceCatalogError: undefined });
     try {
-      const response = await api.get<ProviderPriceCategory[]>('/provider/prices/catalog');
-      const priceCatalog = response.data ?? [];
+      const response = await api.get<ProviderCatalogCategoryResponse[]>(
+        '/provider/prices/catalog',
+      );
+
+      const catalogResponse = response.data ?? [];
+      const priceCatalog: ProviderPriceCategory[] = catalogResponse.map(
+        (category) => ({
+          id: category.id,
+          name: category.name,
+          services: category.services
+            .map((service) => {
+              const version = service.latestVersion;
+
+              if (!version) {
+                return undefined;
+              }
+
+              return {
+                id: version.id,
+                name: service.name,
+                providerPrice:
+                  version.providerPrice === undefined
+                    ? null
+                    : version.providerPrice,
+              } satisfies ProviderPriceService;
+            })
+            .filter((service): service is ProviderPriceService => Boolean(service)),
+        }),
+      );
+
       set({ priceCatalog, isPriceCatalogLoading: false, priceCatalogError: undefined });
     } catch (error) {
       console.error('Failed to load provider price catalog', error);

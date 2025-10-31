@@ -10,7 +10,7 @@ import { ProviderCatalogCategoryDto } from './dto/provider-catalog.dto';
 import { ProviderPriceDto } from './dto/provider-price.dto';
 import { ProviderProfileDto } from './dto/provider-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UpsertPriceDto } from './dto/upsert-price.dto';
+import { UpdateProviderPricesDto } from './dto/update-prices.dto';
 
 type RequestWithUser = Request & { user: JwtPayload };
 
@@ -46,10 +46,10 @@ export class ProviderController {
   }
 
   @Put('prices')
-  upsertPrice(
+  upsertPrices(
     @Req() req: RequestWithUser,
-    @Body() dto: UpsertPriceDto,
-  ): Promise<ProviderPriceDto> {
-    return this.providerService.upsertPrice(req.user.sub, dto);
+    @Body() dto: UpdateProviderPricesDto,
+  ): Promise<ProviderPriceDto[]> {
+    return this.providerService.upsertPrices(req.user.sub, dto);
   }
 }
