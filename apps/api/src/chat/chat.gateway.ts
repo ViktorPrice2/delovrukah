@@ -8,7 +8,6 @@ import {
   WebSocketServer,
   WsException,
 } from '@nestjs/websockets';
-import { Server } from 'socket.io';
 import {
   ChatMessageResponseDto,
   OrdersService,
@@ -20,11 +19,19 @@ import { AuthenticatedSocket, WsAuthGuard } from '../auth/ws-auth.guard';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 
+interface BroadcastOperator {
+  emit(event: string, payload: unknown): void;
+}
+
+interface ChatServer {
+  to(room: string): BroadcastOperator;
+}
+
 @WebSocketGateway({ cors: { origin: '*' } })
 @UseGuards(WsAuthGuard)
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
-  server: Server;
+  server: ChatServer;
 
   constructor(
     private readonly prisma: PrismaService,
