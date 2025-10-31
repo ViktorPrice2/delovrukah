@@ -35,7 +35,23 @@ const ELECTRICAL_SERVICE_VERSION: ServiceVersionDto = {
   whatsNotIncluded: ['Ремонт и замена оборудования'],
   unitOfMeasure: 'выезд',
   requiredTools: ['Тепловизор', 'Мультиметр'],
-  customerRequirements: ['Доступ к электрощиту', 'Свободный доступ к розеткам'],
+  customerRequirements: [
+    'Доступ к электрощитку',
+    'Свободный доступ к розеткам',
+  ],
+  media: [
+    {
+      type: 'image',
+      url: 'https://images.unsplash.com/photo-1582719478173-e5ff41e5974e?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Диагностика электропроводки — проверка автоматики',
+    },
+    {
+      type: 'image',
+      url: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Мастер проверяет электрощит',
+    },
+  ],
+  estimatedTime: '2 часа',
   isActive: true,
   createdAt: new Date('2024-01-10T10:00:00.000Z'),
   updatedAt: new Date('2024-01-10T10:00:00.000Z'),
@@ -118,6 +134,8 @@ function cloneVersion(
     whatsNotIncluded: cloneJsonValue(version.whatsNotIncluded),
     requiredTools: cloneJsonValue(version.requiredTools),
     customerRequirements: cloneJsonValue(version.customerRequirements),
+    media: cloneJsonValue(version.media),
+    estimatedTime: version.estimatedTime ?? null,
     createdAt: new Date(version.createdAt),
     updatedAt: new Date(version.updatedAt),
   };

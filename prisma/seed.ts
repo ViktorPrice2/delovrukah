@@ -21,6 +21,8 @@ type SeedServiceVersion = {
   requiredTools: Prisma.InputJsonValue;
   customerRequirements: Prisma.InputJsonValue;
   isActive?: boolean;
+  media?: Prisma.InputJsonValue;
+  estimatedTime?: string | null;
 };
 
 type SeedServiceTemplate = {
@@ -60,6 +62,88 @@ type SeedProvider = {
   services: SeedProviderService[];
 };
 
+type SeedMediaItem = {
+  type: 'image' | 'video';
+  url: string;
+  alt?: string;
+  previewUrl?: string;
+};
+
+const UNSPLASH_PARAMS = '?auto=format&fit=crop&w=1200&q=80';
+
+function buildMediaSet(title: string, urls: string[]): SeedMediaItem[] {
+  return urls.map((baseUrl, index) => ({
+    type: 'image',
+    url: `${baseUrl}${UNSPLASH_PARAMS}`,
+    previewUrl: `${baseUrl}?auto=format&fit=crop&w=400&q=60`,
+    alt: `${title} — фото ${index + 1}`,
+  }));
+}
+
+const MEDIA_GALLERIES = {
+  mixerBasic: [
+    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
+    'https://images.unsplash.com/photo-1581579186989-0f9ee7ea8f29',
+    'https://images.unsplash.com/photo-1582719478141-44d23c4d49b2',
+  ],
+  mixerAdvanced: [
+    'https://images.unsplash.com/photo-1560179707-f14e90ef3623',
+    'https://images.unsplash.com/photo-1582560475093-23b83109d9d3',
+    'https://images.unsplash.com/photo-1582719478181-bf6c1b1fefd1',
+  ],
+  siphonCleaning: [
+    'https://images.unsplash.com/photo-1570129476769-dcb17c91f90e',
+    'https://images.unsplash.com/photo-1579546928687-0f9be64d0a3c',
+    'https://images.unsplash.com/photo-1581579186984-7f9d48f223e1',
+  ],
+  outletInstallation: [
+    'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158',
+    'https://images.unsplash.com/photo-1492724441997-5dc865305da7',
+    'https://images.unsplash.com/photo-1582056619247-73f8ffa8fd2c',
+  ],
+  wiringDiagnostics: [
+    'https://images.unsplash.com/photo-1582719478173-e5ff41e5974e',
+    'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85',
+    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
+  ],
+  wiringAdvanced: [
+    'https://images.unsplash.com/photo-1593011957406-898b9612b05d',
+    'https://images.unsplash.com/photo-1523419409543-0c1df022bdd1',
+    'https://images.unsplash.com/photo-1582719478141-44d23c4d49b2',
+  ],
+  wallPainting: [
+    'https://images.unsplash.com/photo-1503387762-592deb58ef4e',
+    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
+    'https://images.unsplash.com/photo-1523419409543-0c1df022bdd1',
+  ],
+  tileLaying: [
+    'https://images.unsplash.com/photo-1523413651479-597eb2da0ad6',
+    'https://images.unsplash.com/photo-1523779105320-d1cd346ff52c',
+    'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac',
+  ],
+  acInstallation: [
+    'https://images.unsplash.com/photo-1582719478131-d4f71c0d8af5',
+    'https://images.unsplash.com/photo-1523419409543-0c1df022bdd1',
+    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
+  ],
+  acCleaning: [
+    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
+    'https://images.unsplash.com/photo-1581579186984-7f9d48f223e1',
+    'https://images.unsplash.com/photo-1505691723518-36a1d8328535',
+  ],
+  boilerSetup: [
+    'https://images.unsplash.com/photo-1581579186989-0f9ee7ea8f29',
+    'https://images.unsplash.com/photo-1582719478173-e5ff41e5974e',
+    'https://images.unsplash.com/photo-1582056619247-73f8ffa8fd2c',
+  ],
+} satisfies Record<string, string[]>;
+
+const FALLBACK_MEDIA_GALLERY = [
+  'https://images.unsplash.com/photo-1582719478173-e5ff41e5974e',
+  'https://images.unsplash.com/photo-1503387762-592deb58ef4e',
+  'https://images.unsplash.com/photo-1581579186989-0f9ee7ea8f29',
+];
+
 const categories: SeedCategory[] = [
   {
     name: 'Сантехника',
@@ -97,6 +181,11 @@ const categories: SeedCategory[] = [
               'Наличие нового смесителя и комплектующих',
             ],
             isActive: false,
+            media: buildMediaSet(
+              'Базовая установка смесителя',
+              MEDIA_GALLERIES.mixerBasic,
+            ),
+            estimatedTime: '1.5 часа',
           },
           {
             versionNumber: 2,
@@ -126,6 +215,11 @@ const categories: SeedCategory[] = [
               'Предоставление фильтров и новых комплектующих',
               'Возможность отключения стояка воды при необходимости',
             ],
+            media: buildMediaSet(
+              'Расширенная установка смесителя',
+              MEDIA_GALLERIES.mixerAdvanced,
+            ),
+            estimatedTime: '2 часа',
           },
         ],
       },
@@ -159,6 +253,8 @@ const categories: SeedCategory[] = [
               'Обеспечить рабочее пространство для демонтажа',
               'Предоставить информацию о предыдущих ремонтах',
             ],
+            media: buildMediaSet('Промывка сифона', MEDIA_GALLERIES.siphonCleaning),
+            estimatedTime: '45 минут',
           },
         ],
       },
@@ -198,6 +294,11 @@ const categories: SeedCategory[] = [
               'Предоставить выбранную модель розетки',
               'Доступ к электрощитку',
             ],
+            media: buildMediaSet(
+              'Стандартная установка розетки',
+              MEDIA_GALLERIES.outletInstallation,
+            ),
+            estimatedTime: '1 час',
           },
         ],
       },
@@ -233,6 +334,8 @@ const categories: SeedCategory[] = [
               'Согласование отключения питания при необходимости',
               'Предоставление плана объекта при наличии',
             ],
+            media: buildMediaSet('Первичная диагностика электропроводки', MEDIA_GALLERIES.wiringDiagnostics),
+            estimatedTime: '2 часа',
           },
           {
             versionNumber: 2,
@@ -261,6 +364,8 @@ const categories: SeedCategory[] = [
               'Предоставление информации о нагрузках и оборудовании',
               'Возможность кратковременного отключения линий',
             ],
+            media: buildMediaSet('Расширенная диагностика электропроводки', MEDIA_GALLERIES.wiringAdvanced),
+            estimatedTime: '3.5 часа',
           },
         ],
       },
@@ -301,6 +406,8 @@ const categories: SeedCategory[] = [
               'Обеспечить сухость и чистоту помещения',
               'Предоставить выбранную краску',
             ],
+            media: buildMediaSet('Покраска стен в один слой', MEDIA_GALLERIES.wallPainting),
+            estimatedTime: '6 часов',
           },
         ],
       },
@@ -335,6 +442,8 @@ const categories: SeedCategory[] = [
               'Обеспечить ровное и прочное основание',
               'Свободный доступ к рабочей зоне',
             ],
+            media: buildMediaSet('Базовая укладка плитки', MEDIA_GALLERIES.tileLaying),
+            estimatedTime: '8 часов',
           },
         ],
       },
@@ -375,6 +484,11 @@ const categories: SeedCategory[] = [
                   'Обеспечить доступ к электропитанию 220 В',
                   'Получить разрешение управляющей компании при необходимости',
                 ],
+                media: buildMediaSet(
+                  'Стандартная установка кондиционера',
+                  MEDIA_GALLERIES.acInstallation,
+                ),
+                estimatedTime: '4 часа',
             },
         ],
       },
@@ -408,6 +522,8 @@ const categories: SeedCategory[] = [
               'Предупредить о ранее проведенных обслуживаниях',
               'Предоставить парковку или пропуск при необходимости',
             ],
+            media: buildMediaSet('Сезонная чистка кондиционера', MEDIA_GALLERIES.acCleaning),
+            estimatedTime: '2 часа',
           },
         ],
       },
@@ -441,6 +557,8 @@ const categories: SeedCategory[] = [
               'Подключенные системы отопления и водоснабжения',
               'Доступ к электрической сети и документации на котел',
             ],
+            media: buildMediaSet('Пуско-наладка котла', MEDIA_GALLERIES.boilerSetup),
+            estimatedTime: '3 часа',
           },
         ],
       },
@@ -626,6 +744,10 @@ async function seedCatalog(authorId: string) {
             unitOfMeasure: versionData.unitOfMeasure,
             requiredTools: versionData.requiredTools,
             customerRequirements: versionData.customerRequirements,
+            media:
+              versionData.media ??
+              buildMediaSet(versionData.title, FALLBACK_MEDIA_GALLERY),
+            estimatedTime: versionData.estimatedTime ?? null,
             isActive,
           },
           create: {
@@ -638,6 +760,10 @@ async function seedCatalog(authorId: string) {
             unitOfMeasure: versionData.unitOfMeasure,
             requiredTools: versionData.requiredTools,
             customerRequirements: versionData.customerRequirements,
+            media:
+              versionData.media ??
+              buildMediaSet(versionData.title, FALLBACK_MEDIA_GALLERY),
+            estimatedTime: versionData.estimatedTime ?? null,
             isActive,
           },
         });

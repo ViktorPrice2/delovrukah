@@ -118,6 +118,8 @@ model ServiceTemplateVersion {
   unitOfMeasure        String
   requiredTools        Json
   customerRequirements Json
+  media                Json
+  estimatedTime        String?
   isActive             Boolean         @default(true)
   serviceTemplate      ServiceTemplate @relation(fields: [serviceTemplateId], references: [id], onDelete: Cascade)
   prices               Price[]

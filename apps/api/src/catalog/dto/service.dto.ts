@@ -12,6 +12,8 @@ export class ServiceVersionDto {
   unitOfMeasure: string;
   requiredTools: Prisma.JsonValue;
   customerRequirements: Prisma.JsonValue;
+  media: Prisma.JsonValue;
+  estimatedTime: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

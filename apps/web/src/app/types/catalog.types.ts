@@ -29,6 +29,13 @@ export interface Provider {
 }
 
 /** Описывает конкретную версию услуги */
+export interface ServiceMediaItem {
+  type: 'image' | 'video';
+  url: string;
+  previewUrl?: string | null;
+  alt?: string | null;
+}
+
 export interface ServiceVersion {
   id: string;
   versionNumber: number;
@@ -39,6 +46,8 @@ export interface ServiceVersion {
   unitOfMeasure: string | null;
   requiredTools: string[] | null;
   customerRequirements: string[] | null;
+  media: ServiceMediaItem[] | null;
+  estimatedTime: string | null;
   isActive: boolean;
   createdAt: string; // Даты приходят как строки в JSON
   updatedAt: string;

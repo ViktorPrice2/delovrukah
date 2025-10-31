@@ -70,6 +70,40 @@ const ICON_VARIANTS: Record<NonNullable<ServiceScopeListProps["iconVariant"]>, {
 const joinClassNames = (base: string, extra?: string) =>
   extra ? `${base} ${extra}` : base;
 
+const LINK_REGEX = /(https?:\/\/[^\s]+)/gi;
+
+function renderItemText(text: string) {
+  const segments = text.split(LINK_REGEX);
+
+  if (segments.length === 1) {
+    return text;
+  }
+
+  const matches = text.match(LINK_REGEX) ?? [];
+  const nodes: ReactNode[] = [];
+
+  segments.forEach((segment, index) => {
+    if (segment) {
+      nodes.push(segment);
+    }
+
+    const link = matches[index];
+    if (link) {
+      nodes.push(
+        <a
+          key={`${link}-${index}`}
+          href="#"
+          className="text-emerald-600 underline-offset-2 transition hover:text-emerald-700 hover:underline"
+        >
+          {link}
+        </a>,
+      );
+    }
+  });
+
+  return nodes;
+}
+
 export const ServiceScopeList: FC<ServiceScopeListProps> = ({
   title,
   items,
@@ -107,7 +141,9 @@ export const ServiceScopeList: FC<ServiceScopeListProps> = ({
             >
               {icon}
             </span>
-            <span className="text-sm leading-relaxed text-slate-700">{item}</span>
+            <span className="text-sm leading-relaxed text-slate-700">
+              {renderItemText(item)}
+            </span>
           </li>
         ))}
       </ul>
