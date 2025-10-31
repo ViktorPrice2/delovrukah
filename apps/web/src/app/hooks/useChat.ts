@@ -93,10 +93,9 @@ function normalizeServerMessage(
 }
 
 export function useChat(orderId: string | undefined) {
-  const { token, userId, incrementUnreadCount } = useAuth((state) => ({
+  const { token, userId } = useAuth((state) => ({
     token: state.token,
     userId: state.user?.id,
-    incrementUnreadCount: state.incrementUnreadCount,
   }));
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -149,24 +148,11 @@ export function useChat(orderId: string | undefined) {
       });
     });
 
-    socket.on("notification:new-message", (message) => {
-      if (!userId) {
-        return;
-      }
-
-      const normalized = normalizeServerMessage(message, orderId);
-      if (normalized.senderId === userId) {
-        return;
-      }
-
-      incrementUnreadCount();
-    });
-
     return () => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [orderId, token, userId, incrementUnreadCount]);
+  }, [orderId, token, userId]);
 
   const initializeMessages = useCallback((history: ChatMessage[]) => {
     setMessages(
