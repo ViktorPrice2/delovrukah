@@ -1,5 +1,5 @@
 import { getApiBaseUrl } from "@/lib/get-api-base-url";
-import type { Category, City, ServiceDetail } from "../types/catalog.types";
+import type { Category, City, ServiceDetail, ServiceVersion } from "../types/catalog.types";
 import {
   findMockServiceBySlugOrId,
   getMockCategories,
@@ -42,6 +42,69 @@ async function fetchFromApi<T>(path: string): Promise<T | null> {
     // Возвращаем null, чтобы страница могла показать 404, а не упасть с ошибкой 500
     return null;
   }
+}
+
+function normalizeStringArray(value: unknown): string[] | null {
+  if (!value) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map((item) => {
+        if (typeof item === "string") {
+          return item.trim();
+        }
+        if (item == null) {
+          return "";
+        }
+        return String(item).trim();
+      })
+      .filter((item) => item.length > 0);
+
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value
+      .split(/\r?\n/)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  return String(value).trim().length > 0 ? [String(value).trim()] : null;
+}
+
+function normalizeServiceVersion(version: ServiceVersion | null | undefined): ServiceVersion | null {
+  if (!version) {
+    return null;
+  }
+
+  const unitOfMeasure = typeof version.unitOfMeasure === "string" ? version.unitOfMeasure.trim() : null;
+
+  return {
+    ...version,
+    description: version.description ?? null,
+    whatsIncluded: normalizeStringArray(version.whatsIncluded),
+    whatsNotIncluded: normalizeStringArray(version.whatsNotIncluded),
+    unitOfMeasure: unitOfMeasure && unitOfMeasure.length > 0 ? unitOfMeasure : null,
+    requiredTools: normalizeStringArray(version.requiredTools),
+    customerRequirements: normalizeStringArray(version.customerRequirements),
+  };
+}
+
+function normalizeServiceDetail(service: ServiceDetail): ServiceDetail {
+  return {
+    ...service,
+    description: service.description ?? null,
+    latestVersion: normalizeServiceVersion(service.latestVersion),
+    providers: service.providers?.map((provider) => ({
+      ...provider,
+      description: provider.description ?? null,
+    })),
+  };
 }
 
 // --- Функции для получения данных ---
@@ -88,7 +151,7 @@ export async function getServicesByCategory(citySlug: string, categorySlug: stri
   );
 
   if (services && services.length > 0) {
-    return services;
+    return services.map(normalizeServiceDetail);
   }
 
   const fallback = getMockServicesByCategorySlug(categorySlug, citySlug);
@@ -97,7 +160,7 @@ export async function getServicesByCategory(citySlug: string, categorySlug: stri
     console.warn(
       `Falling back to mock services for category "${categorySlug}" in city "${citySlug}" because the API is unavailable.`,
     );
-    return fallback;
+    return fallback.map(normalizeServiceDetail);
   }
 
   return [];
@@ -129,7 +192,7 @@ export async function getServiceDetailsBySlug(
         console.warn(
           `Falling back to mock service data for "${candidate}" in city "${citySlug}" because the API is unavailable.`
         );
-        return mockService;
+        return normalizeServiceDetail(mockService);
       }
     }
 
@@ -144,7 +207,7 @@ export async function getServiceDetailsBySlug(
     );
 
     if (primary) {
-      return primary;
+      return normalizeServiceDetail(primary);
     }
   } else if (!normalizedFallback) {
     // Нечего искать: слаг не передан и альтернативный идентификатор отсутствует.
@@ -152,11 +215,11 @@ export async function getServiceDetailsBySlug(
   }
 
   if (!normalizedFallback || normalizedFallback.length === 0) {
-    return primary ?? tryMockFallback();
+    return (primary && normalizeServiceDetail(primary)) ?? tryMockFallback();
   }
 
   if (normalizedSlug && normalizedFallback === normalizedSlug) {
-    return primary ?? tryMockFallback();
+    return (primary && normalizeServiceDetail(primary)) ?? tryMockFallback();
   }
 
   const fallbackService = await fetchFromApi<ServiceDetail>(
@@ -164,7 +227,7 @@ export async function getServiceDetailsBySlug(
   );
 
   if (fallbackService) {
-    return fallbackService;
+    return normalizeServiceDetail(fallbackService);
   }
 
   return tryMockFallback();
