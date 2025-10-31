@@ -8,6 +8,11 @@ import { z } from "zod";
 import { api } from "@/lib/api";
 import { useProviderStore } from "@/app/store/provider.store";
 
+const hourlyRatePattern = /^\d+(?:[.,]\d{0,2})?$/;
+
+const formatHourlyRateInput = (rate: number | null | undefined): string =>
+  typeof rate === "number" && !Number.isNaN(rate) ? rate.toString() : "";
+
 const profileSchema = z.object({
   displayName: z
     .string()
@@ -18,6 +23,16 @@ const profileSchema = z.object({
     .min(10, "Минимум 10 символов")
     .max(1000, "Максимум 1000 символов"),
   cityId: z.string().min(1, "Выберите город"),
+  hourlyRate: z
+    .string()
+    .trim()
+    .refine(
+      (value) =>
+        value.length === 0 ||
+        (hourlyRatePattern.test(value) &&
+          Number.parseFloat(value.replace(",", ".")) >= 0),
+      "Введите неотрицательное число или оставьте поле пустым",
+    ),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -62,6 +77,7 @@ export default function ProviderSettingsPage() {
       displayName: profile?.displayName ?? "",
       description: profile?.description ?? "",
       cityId: profile?.cityId ? String(profile.cityId) : "",
+      hourlyRate: formatHourlyRateInput(profile?.hourlyRate),
     },
   });
 
@@ -94,6 +110,7 @@ export default function ProviderSettingsPage() {
         displayName: profile.displayName ?? "",
         description: profile.description ?? "",
         cityId: profile.cityId ? String(profile.cityId) : "",
+        hourlyRate: formatHourlyRateInput(profile.hourlyRate),
       });
     }
   }, [profile, reset]);
@@ -116,13 +133,23 @@ export default function ProviderSettingsPage() {
 
   const onSubmit = async (values: ProfileFormValues) => {
     try {
+      const normalizedHourlyRate = values.hourlyRate.trim();
+      const hourlyRate =
+        normalizedHourlyRate.length === 0
+          ? null
+          : Number.parseFloat(normalizedHourlyRate.replace(",", "."));
+
       await updateProfile({
         displayName: values.displayName,
         description: values.description,
         cityId: values.cityId,
+        hourlyRate,
       });
       setSuccessMessage("Профиль успешно обновлен");
-      reset(values);
+      reset({
+        ...values,
+        hourlyRate: normalizedHourlyRate,
+      });
     } catch (error) {
       console.error("Failed to submit profile form", error);
     }
@@ -152,6 +179,11 @@ export default function ProviderSettingsPage() {
           <p className="mt-2">{profile?.displayName ? "Имя указано" : "Добавьте отображаемое имя"}</p>
           <p>{profile?.description ? "Описание заполнено" : "Расскажите о своем опыте"}</p>
           <p>{profile?.cityId ? "Город выбран" : "Выберите город, где вы работаете"}</p>
+          <p>
+            {profile?.hourlyRate !== null && profile?.hourlyRate !== undefined
+              ? "Почасовая ставка указана"
+              : "Укажите почасовую ставку"}
+          </p>
         </div>
       </div>
 
@@ -194,6 +226,26 @@ export default function ProviderSettingsPage() {
               />
               {errors.displayName && (
                 <p className="text-sm text-rose-600">{errors.displayName.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-700" htmlFor="hourlyRate">
+                Моя почасовая ставка, ₽/час
+              </label>
+              <input
+                id="hourlyRate"
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9,.]*"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                placeholder="Например, 1500"
+                {...register("hourlyRate")}
+              />
+              <p className="text-xs text-slate-500">
+                Оставьте поле пустым, если готовы обсуждать стоимость дополнительных работ отдельно.
+              </p>
+              {errors.hourlyRate && (
+                <p className="text-sm text-rose-600">{errors.hourlyRate.message}</p>
               )}
             </div>
           </section>

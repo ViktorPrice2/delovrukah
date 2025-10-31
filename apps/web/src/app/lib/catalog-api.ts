@@ -171,6 +171,16 @@ function normalizeServiceDetail(service: ServiceDetail): ServiceDetail {
     providers: service.providers?.map((provider) => ({
       ...provider,
       description: provider.description ?? null,
+      hourlyRate:
+        typeof provider.hourlyRate === "number"
+          ? provider.hourlyRate
+          : provider.hourlyRate !== null && provider.hourlyRate !== undefined
+          ? Number(provider.hourlyRate)
+          : null,
+      estimatedTime:
+        typeof provider.estimatedTime === "string"
+          ? provider.estimatedTime.trim() || null
+          : null,
     })),
   };
 }

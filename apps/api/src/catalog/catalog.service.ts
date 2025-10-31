@@ -182,7 +182,10 @@ export class CatalogService {
             providerProfile: { cityId: city.id },
             OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
           },
-          include: { providerProfile: { include: { city: true } } },
+          include: {
+            providerProfile: { include: { city: true } },
+            serviceTemplateVersion: true,
+          },
           orderBy: { price: 'asc' },
         });
         providers = prices
@@ -193,6 +196,7 @@ export class CatalogService {
             return this.mapServiceProvider(
               price.providerProfile as ProviderProfile & { city: City },
               price.price,
+              price.serviceTemplateVersion?.estimatedTime ?? null,
             );
           })
           .filter(
@@ -313,6 +317,7 @@ export class CatalogService {
   private mapServiceProvider(
     provider: ProviderProfile & { city: City },
     price: Prisma.Decimal,
+    estimatedTime: string | null,
   ): ServiceProviderDto {
     return {
       id: provider.id,
@@ -320,6 +325,8 @@ export class CatalogService {
       description: provider.description ?? null,
       price: price.toNumber(),
       city: this.mapCity(provider.city),
+      hourlyRate: provider.hourlyRate ? provider.hourlyRate.toNumber() : null,
+      estimatedTime,
     };
   }
 

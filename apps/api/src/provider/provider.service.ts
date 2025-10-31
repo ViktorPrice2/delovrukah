@@ -140,6 +140,11 @@ export class ProviderService {
         : { disconnect: true };
     }
 
+    if (dto.hourlyRate !== undefined) {
+      data.hourlyRate =
+        dto.hourlyRate === null ? null : new Prisma.Decimal(dto.hourlyRate);
+    }
+
     if (Object.keys(data).length === 0) {
       return {
         id: providerProfile.id,
@@ -147,6 +152,7 @@ export class ProviderService {
         description: providerProfile.description ?? null,
         cityId: providerProfile.cityId ?? null,
         cityName: providerProfile.city?.name ?? null,
+        hourlyRate: providerProfile.hourlyRate?.toNumber() ?? null,
         createdAt: providerProfile.createdAt,
         updatedAt: providerProfile.updatedAt,
       };
@@ -164,6 +170,7 @@ export class ProviderService {
       description: updatedProfile.description ?? null,
       cityId: updatedProfile.cityId ?? null,
       cityName: updatedProfile.city?.name ?? null,
+      hourlyRate: updatedProfile.hourlyRate?.toNumber() ?? null,
       createdAt: updatedProfile.createdAt,
       updatedAt: updatedProfile.updatedAt,
     };
@@ -267,6 +274,7 @@ export class ProviderService {
       description: providerProfile.description ?? null,
       cityId: providerProfile.cityId ?? null,
       cityName: providerProfile.city?.name ?? null,
+      hourlyRate: providerProfile.hourlyRate?.toNumber() ?? null,
       createdAt: providerProfile.createdAt,
       updatedAt: providerProfile.updatedAt,
     };

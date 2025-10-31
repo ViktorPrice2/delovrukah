@@ -35,6 +35,8 @@ export class ServiceProviderDto {
   description: string | null;
   price: number;
   city: CityDto;
+  hourlyRate: number | null;
+  estimatedTime: string | null;
 }
 
 export class ServiceDetailDto extends ServiceSummaryDto {

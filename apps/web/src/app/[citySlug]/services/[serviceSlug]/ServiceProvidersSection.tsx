@@ -61,14 +61,19 @@ function getRating(id: string): { rating: number; reviews: number } {
   return { rating: Math.min(4.9, parseFloat(rating.toFixed(1))), reviews };
 }
 
-function getPriorityMetrics(provider: Provider): Record<PriorityKey, number> {
-  const hash = computeHash(provider.id);
-  const speed = 60 + (hash % 40);
+function getPriorityMetrics(
+  provider: Provider,
+  serviceEstimatedTime: string | null,
+): Record<PriorityKey, number> {
+  const estimatedTimeMinutes =
+    parseEstimatedTimeToMinutes(provider.estimatedTime) ??
+    parseEstimatedTimeToMinutes(serviceEstimatedTime) ??
+    Number.POSITIVE_INFINITY;
   const quality = getRating(provider.id).rating * 10;
   const price = provider.price;
 
   return {
-    speed,
+    speed: estimatedTimeMinutes,
     quality,
     price,
   };
@@ -106,11 +111,47 @@ function getAvailability(id: string): string {
   return `Старт через ${mod + 1} дня`;
 }
 
+function parseEstimatedTimeToMinutes(
+  estimatedTime: string | null | undefined,
+): number | null {
+  if (!estimatedTime) {
+    return null;
+  }
+
+  const normalized = estimatedTime.toLowerCase().replace(',', '.').trim();
+  const match = normalized.match(/\d+(?:\.\d+)?/);
+
+  if (!match) {
+    return null;
+  }
+
+  const value = Number.parseFloat(match[0]);
+
+  if (Number.isNaN(value)) {
+    return null;
+  }
+
+  if (normalized.includes('мин')) {
+    return Math.round(value);
+  }
+
+  if (normalized.includes('час')) {
+    return Math.round(value * 60);
+  }
+
+  if (normalized.includes('дн')) {
+    return Math.round(value * 24 * 60);
+  }
+
+  return Math.round(value);
+}
+
 function ProviderCard({ provider, service }: ProviderCardProps) {
   const initials = useMemo(() => getInitials(provider.displayName || provider.id), [provider]);
   const meta = useMemo(() => getRating(provider.id), [provider.id]);
   const badges = useMemo(() => getBadges(provider.id), [provider.id]);
   const availability = useMemo(() => getAvailability(provider.id), [provider.id]);
+  const estimatedTimeLabel = provider.estimatedTime ?? service.latestVersion?.estimatedTime ?? null;
 
   return (
     <li className="group rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md">
@@ -148,6 +189,11 @@ function ProviderCard({ provider, service }: ProviderCardProps) {
             {service.latestVersion?.unitOfMeasure ? (
               <span className="text-xs text-slate-500">за {service.latestVersion.unitOfMeasure.toLowerCase()}</span>
             ) : null}
+            {provider.hourlyRate !== null ? (
+              <span className="text-xs text-slate-500">
+                Доп. работы: {provider.hourlyRate.toLocaleString('ru-RU')} ₽/час
+              </span>
+            ) : null}
           </div>
         </div>
 
@@ -156,12 +202,12 @@ function ProviderCard({ provider, service }: ProviderCardProps) {
         ) : null}
 
         <div className="flex flex-wrap gap-2 text-xs">
-          {service.latestVersion?.estimatedTime ? (
+          {estimatedTimeLabel ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600">
               <span role="img" aria-label="Время">
                 ⏱️
               </span>
-              {service.latestVersion.estimatedTime}
+              {estimatedTimeLabel}
             </span>
           ) : null}
           {badges.map((badge) => (
@@ -210,6 +256,7 @@ export function ServiceProvidersSection({ providers, service, cityName }: Provid
   const [selectedPriorities, setSelectedPriorities] = useState<PriorityKey[]>(['quality', 'price']);
   const [currentPage, setCurrentPage] = useState(1);
   const hasProviders = providers.length > 0;
+  const serviceEstimatedTime = service.latestVersion?.estimatedTime ?? null;
 
   const priorityTags = PRIORITY_TAGS;
 
@@ -217,9 +264,9 @@ export function ServiceProvidersSection({ providers, service, cityName }: Provid
     () =>
       providers.map((provider) => ({
         provider,
-        metrics: getPriorityMetrics(provider),
+        metrics: getPriorityMetrics(provider, serviceEstimatedTime),
       })),
-    [providers],
+    [providers, serviceEstimatedTime],
   );
 
   const sortedProviders = useMemo(() => {
@@ -234,7 +281,7 @@ export function ServiceProvidersSection({ providers, service, cityName }: Provid
           const valueB = b.metrics[priority];
 
           if (valueA !== valueB) {
-            if (priority === 'price') {
+            if (priority === 'price' || priority === 'speed') {
               return valueA - valueB;
             }
             return valueB - valueA;

@@ -59,6 +59,7 @@ type SeedProvider = {
   displayName: string;
   description?: string;
   citySlug: string;
+  hourlyRate?: number;
   services: SeedProviderService[];
 };
 
@@ -607,6 +608,7 @@ const providerSeeds: SeedProvider[] = [
     displayName: 'Мастер сантехник (Москва)',
     description: 'Опыт более 10 лет по сантехническим работам в Москве.',
     citySlug: 'moskva',
+    hourlyRate: 1800,
     services: [
       {
         categoryName: 'Сантехника',
@@ -622,7 +624,7 @@ const providerSeeds: SeedProvider[] = [
         categoryName: 'Климат',
         serviceName: 'Установка кондиционера',
         price: 9500,
-      }
+      },
     ],
   },
   {
@@ -630,6 +632,7 @@ const providerSeeds: SeedProvider[] = [
     displayName: 'Электрик на дом (Санкт-Петербург)',
     description: 'Сертифицированный электрик с гарантийным обслуживанием.',
     citySlug: 'sankt-peterburg',
+    hourlyRate: 2200,
     services: [
       {
         categoryName: 'Электрика',
@@ -648,6 +651,7 @@ const providerSeeds: SeedProvider[] = [
     displayName: 'Отделочник (Казань)',
     description: 'Выполняю отделочные работы под ключ.',
     citySlug: 'kazan',
+    hourlyRate: 2000,
     services: [
       {
         categoryName: 'Отделка',
@@ -666,6 +670,7 @@ const providerSeeds: SeedProvider[] = [
     displayName: 'Климат-сервис (Новосибирск)',
     description: 'Обслуживание кондиционеров и котлов в Новосибирске.',
     citySlug: 'novosibirsk',
+    hourlyRate: 1900,
     services: [
       {
         categoryName: 'Климат',
@@ -829,6 +834,11 @@ async function seedProviders(
       continue;
     }
 
+    const hourlyRateData =
+      providerData.hourlyRate !== undefined
+        ? { hourlyRate: new Prisma.Decimal(providerData.hourlyRate) }
+        : {};
+
     const user = await prisma.user.upsert({
       where: { email: providerData.email },
       update: {},
@@ -845,12 +855,14 @@ async function seedProviders(
         displayName: providerData.displayName,
         description: providerData.description ?? null,
         cityId: city.id,
+        ...hourlyRateData,
       },
       create: {
         userId: user.id,
         displayName: providerData.displayName,
         description: providerData.description ?? null,
         cityId: city.id,
+        ...hourlyRateData,
       },
     });
 
