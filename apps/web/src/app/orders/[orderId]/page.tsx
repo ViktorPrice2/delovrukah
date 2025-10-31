@@ -30,13 +30,21 @@ interface RawChatMessage extends Partial<ChatMessage> {
 export default function OrderDetailsPage({ params }: OrderPageProps) {
   const { orderId } = use(params);
   const router = useRouter();
-  const { user, token, isLoading } = useAuth((state) => ({
+  const { user, token, isLoading, decrementUnreadCount } = useAuth((state) => ({
     user: state.user,
     token: state.token,
     isLoading: state.isLoading,
+    decrementUnreadCount: state.decrementUnreadCount,
   }));
 
-  const { messages, initializeMessages, sendMessage, isConnected, connectionError } = useChat(orderId);
+  const {
+    messages,
+    initializeMessages,
+    markMessagesAsReadLocally,
+    sendMessage,
+    isConnected,
+    connectionError,
+  } = useChat(orderId);
 
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -44,6 +52,7 @@ export default function OrderDetailsPage({ params }: OrderPageProps) {
   const [messageDraft, setMessageDraft] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const readMessageIdsRef = useRef<Set<string>>(new Set());
 
   const normalizeMessage = useCallback(
     (raw: RawChatMessage): ChatMessage => {
@@ -89,6 +98,7 @@ export default function OrderDetailsPage({ params }: OrderPageProps) {
         senderId: senderIdCandidate,
         senderName: senderNameCandidate,
         createdAt: normalizedCreatedAt,
+        isRead: typeof raw.isRead === "boolean" ? raw.isRead : false,
       };
     },
     [orderId]
@@ -149,6 +159,42 @@ export default function OrderDetailsPage({ params }: OrderPageProps) {
     messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    readMessageIdsRef.current = new Set();
+  }, [orderId]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    const unreadMessages = messages.filter(
+      (message) =>
+        message.senderId !== user.id &&
+        message.isRead === false &&
+        !readMessageIdsRef.current.has(message.id),
+    );
+
+    if (unreadMessages.length === 0) {
+      return;
+    }
+
+    const unreadIds = unreadMessages.map((message) => message.id);
+
+    const markMessages = async () => {
+      try {
+        await api.post(`/orders/${orderId}/messages/read`, { messageIds: unreadIds });
+        unreadIds.forEach((id) => readMessageIdsRef.current.add(id));
+        markMessagesAsReadLocally(unreadIds);
+        decrementUnreadCount(unreadIds.length);
+      } catch (error) {
+        console.error('Failed to mark messages as read', error);
+      }
+    };
+
+    void markMessages();
+  }, [messages, user?.id, orderId, markMessagesAsReadLocally, decrementUnreadCount]);
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -190,7 +236,8 @@ export default function OrderDetailsPage({ params }: OrderPageProps) {
               <p className="text-sm text-neutral-500">Сообщений пока нет. Напишите первое сообщение.</p>
             ) : (
               messages.map((message) => {
-                const isOwnMessage = message.senderId && user?.email && message.senderId === user.email;
+                const isOwnMessage =
+                  message.senderId && user?.id && message.senderId === user.id;
                 const timestampLabel = new Date(message.createdAt).toLocaleString("ru-RU");
                 const authorLabel = message.senderName ?? message.senderId;
 
