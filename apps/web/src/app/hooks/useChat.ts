@@ -16,26 +16,78 @@ export interface ChatMessage {
   createdAt: string;
 }
 
-interface JoinRoomPayload {
-  orderId: string;
-}
-
-interface SendMessagePayload {
-  orderId: string;
-  content: string;
+interface RawServerMessage extends Partial<ChatMessage> {
+  text?: string;
+  message?: string;
+  sender?: {
+    id?: string;
+    displayName?: string;
+  };
+  [key: string]: unknown;
 }
 
 interface ServerToClientEvents {
-  messageToClient: (message: ChatMessage) => void;
+  newMessage: (message: RawServerMessage) => void;
 }
 
 interface ClientToServerEvents {
-  joinRoom: (payload: JoinRoomPayload) => void;
-  leaveRoom: (payload: JoinRoomPayload) => void;
-  sendMessage: (payload: SendMessagePayload) => void;
+  joinOrder: (payload: { orderId: string }) => void;
+  sendMessage: (payload: { orderId: string; text: string }) => void;
 }
 
 type ChatSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
+
+function normalizeServerMessage(
+  raw: RawServerMessage,
+  fallbackOrderId: string,
+): ChatMessage {
+  const normalizedOrderId =
+    typeof raw.orderId === "string" && raw.orderId.length > 0
+      ? raw.orderId
+      : fallbackOrderId;
+
+  const normalizedCreatedAt =
+    typeof raw.createdAt === "string" && raw.createdAt.length > 0
+      ? raw.createdAt
+      : new Date().toISOString();
+
+  const senderIdCandidate =
+    typeof raw.senderId === "string"
+      ? raw.senderId
+      : typeof raw.sender?.id === "string"
+      ? raw.sender.id
+      : "unknown";
+
+  const senderNameCandidate =
+    typeof raw.senderName === "string"
+      ? raw.senderName
+      : typeof raw.sender?.displayName === "string"
+      ? raw.sender.displayName
+      : undefined;
+
+  const contentCandidate =
+    typeof raw.content === "string"
+      ? raw.content
+      : typeof raw.text === "string"
+      ? raw.text
+      : typeof raw.message === "string"
+      ? raw.message
+      : "";
+
+  const normalizedId =
+    typeof raw.id === "string" && raw.id.length > 0
+      ? raw.id
+      : `${normalizedOrderId}-${senderIdCandidate}-${normalizedCreatedAt}`;
+
+  return {
+    id: normalizedId,
+    orderId: normalizedOrderId,
+    content: contentCandidate,
+    senderId: senderIdCandidate,
+    senderName: senderNameCandidate,
+    createdAt: normalizedCreatedAt,
+  };
+}
 
 export function useChat(orderId: string | undefined) {
   const token = useAuth((state) => state.token);
@@ -63,7 +115,7 @@ export function useChat(orderId: string | undefined) {
     socket.on("connect", () => {
       setIsConnected(true);
       setConnectionError(null);
-      socket.emit("joinRoom", { orderId });
+      socket.emit("joinOrder", { orderId });
     });
 
     socket.on("disconnect", () => {
@@ -74,20 +126,23 @@ export function useChat(orderId: string | undefined) {
       setConnectionError(error?.message ?? "Не удалось подключиться к чату.");
     });
 
-    socket.on("messageToClient", (message) => {
+    socket.on("newMessage", (message) => {
+      const normalized = normalizeServerMessage(message, orderId);
+
       setMessages((prev) => {
-        const alreadyExists = prev.some((item) => item.id === message.id);
+        const alreadyExists = prev.some((item) => item.id === normalized.id);
         if (alreadyExists) {
           return prev;
         }
 
-        const nextMessages = [...prev, message];
-        return nextMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        const nextMessages = [...prev, normalized];
+        return nextMessages.sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        );
       });
     });
 
     return () => {
-      socket.emit("leaveRoom", { orderId });
       socket.disconnect();
       socketRef.current = null;
     };
@@ -111,7 +166,7 @@ export function useChat(orderId: string | undefined) {
         return false;
       }
 
-      socketRef.current.emit("sendMessage", { orderId, content: trimmed });
+      socketRef.current.emit("sendMessage", { orderId, text: trimmed });
       return true;
     },
     [orderId]
