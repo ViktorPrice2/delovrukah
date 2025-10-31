@@ -15,9 +15,7 @@
         ".eslintrc.*",
         "**/.eslintignore"
       ],
-      "outputs": [],
-      "parallel": true,
-      "timeout": 300000
+      "outputs": ["!node_modules/.cache/.eslintcache"]
     },
     "dev": {
       "cache": false,
