@@ -4,6 +4,7 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import { AuthProvider } from "./components/AuthProvider";
 import Header from "./components/Header";
+import { NotificationsListener } from "./components/NotificationsListener";
 
 export const metadata: Metadata = {
   title: "Delovrukah.ru - Сервис поиска мастеров",
@@ -19,6 +20,7 @@ export default function RootLayout({
     <html lang="ru" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="bg-slate-50 antialiased">
         <AuthProvider>
+          <NotificationsListener />
           <div className="min-h-screen text-slate-900">
             <Header />
             <main className="mx-auto w-full max-w-6xl px-4 py-8">{children}</main>
