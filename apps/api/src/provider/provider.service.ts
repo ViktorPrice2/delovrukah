@@ -8,9 +8,21 @@ import { ProviderProfileDto } from './dto/provider-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateProviderPricesDto } from './dto/update-prices.dto';
 
+type ProviderProfileRecord = {
+  id: string;
+  displayName: string;
+  description: string | null;
+  cityId: string | null;
+  city: { id: string; name: string } | null;
+  createdAt: Date;
+  updatedAt: Date;
+  hourlyRate?: Prisma.Decimal | number | null;
+};
+
 @Injectable()
 export class ProviderService {
   private readonly logger = new Logger(ProviderService.name);
+  private hourlyRateColumnAvailable?: boolean;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -25,10 +37,8 @@ export class ProviderService {
       return [];
     }
 
-    const providerProfile = await this.prisma.providerProfile.findUnique({
-      where: { userId },
-      include: { city: true },
-    });
+    const { profile: providerProfile } =
+      await this.findProviderProfileByUserId(userId);
 
     if (!providerProfile) {
       throw new NotFoundException('Provider profile not found');
@@ -58,10 +68,8 @@ export class ProviderService {
       return [];
     }
 
-    const providerProfile = await this.prisma.providerProfile.findUnique({
-      where: { userId },
-      include: { city: true },
-    });
+    const { profile: providerProfile } =
+      await this.findProviderProfileByUserId(userId);
 
     if (!providerProfile) {
       throw new NotFoundException('Provider profile not found');
@@ -138,18 +146,14 @@ export class ProviderService {
       throw new NotFoundException('Provider profile not found');
     }
 
-    const providerProfile = await this.prisma.providerProfile.findUnique({
-      where: { userId },
-      include: { city: true },
-    });
+    const { profile: providerProfile, hourlyRateAvailable } =
+      await this.findProviderProfileByUserId(userId);
 
     if (!providerProfile) {
       throw new NotFoundException('Provider profile not found');
     }
 
-    const data: (Prisma.ProviderProfileUpdateInput & {
-      hourlyRate?: Prisma.Decimal | null;
-    }) = {};
+    const data: Prisma.ProviderProfileUpdateInput = {};
 
     if (dto.displayName !== undefined) {
       data.displayName = dto.displayName;
@@ -166,39 +170,27 @@ export class ProviderService {
     }
 
     if (dto.hourlyRate !== undefined) {
-      data.hourlyRate =
-        dto.hourlyRate === null ? null : new Prisma.Decimal(dto.hourlyRate);
+      if (hourlyRateAvailable) {
+        data.hourlyRate =
+          dto.hourlyRate === null ? null : new Prisma.Decimal(dto.hourlyRate);
+      } else {
+        this.logger.warn(
+          'Attempted to update provider hourly rate, but the column is missing. Skipping hourly rate update.',
+        );
+      }
     }
 
     if (Object.keys(data).length === 0) {
-      return {
-        id: providerProfile.id,
-        displayName: providerProfile.displayName,
-        description: providerProfile.description ?? null,
-        cityId: providerProfile.cityId ?? null,
-        cityName: providerProfile.city?.name ?? null,
-        hourlyRate: this.normalizeHourlyRate(providerProfile),
-        createdAt: providerProfile.createdAt,
-        updatedAt: providerProfile.updatedAt,
-      };
+      return this.mapProviderProfileToDto(providerProfile);
     }
 
-    const updatedProfile = await this.prisma.providerProfile.update({
+    const updatedProfile = (await this.prisma.providerProfile.update({
       where: { id: providerProfile.id },
       data,
-      include: { city: true },
-    });
+      select: this.getProviderProfileSelect(hourlyRateAvailable),
+    })) as ProviderProfileRecord;
 
-    return {
-      id: updatedProfile.id,
-      displayName: updatedProfile.displayName,
-      description: updatedProfile.description ?? null,
-      cityId: updatedProfile.cityId ?? null,
-      cityName: updatedProfile.city?.name ?? null,
-      hourlyRate: this.normalizeHourlyRate(updatedProfile),
-      createdAt: updatedProfile.createdAt,
-      updatedAt: updatedProfile.updatedAt,
-    };
+    return this.mapProviderProfileToDto(updatedProfile);
   }
 
   async upsertPrices(
@@ -212,9 +204,8 @@ export class ProviderService {
       throw new NotFoundException('Provider profile not found');
     }
 
-    const providerProfile = await this.prisma.providerProfile.findUnique({
-      where: { userId },
-    });
+    const { profile: providerProfile } =
+      await this.findProviderProfileByUserId(userId);
 
     if (!providerProfile) {
       throw new NotFoundException('Provider profile not found');
@@ -298,25 +289,14 @@ export class ProviderService {
       throw new NotFoundException('Provider profile not found');
     }
 
-    const providerProfile = await this.prisma.providerProfile.findUnique({
-      where: { userId },
-      include: { city: true },
-    });
+    const { profile: providerProfile } =
+      await this.findProviderProfileByUserId(userId);
 
     if (!providerProfile) {
       throw new NotFoundException('Provider profile not found');
     }
 
-    return {
-      id: providerProfile.id,
-      displayName: providerProfile.displayName,
-      description: providerProfile.description ?? null,
-      cityId: providerProfile.cityId ?? null,
-      cityName: providerProfile.city?.name ?? null,
-      hourlyRate: this.normalizeHourlyRate(providerProfile),
-      createdAt: providerProfile.createdAt,
-      updatedAt: providerProfile.updatedAt,
-    };
+    return this.mapProviderProfileToDto(providerProfile);
   }
 
   private normalizeHourlyRate(provider: unknown): number | null {
@@ -337,5 +317,100 @@ export class ProviderService {
     }
 
     return hourlyRate.toNumber();
+  }
+
+  private async findProviderProfileByUserId(userId: string): Promise<{
+    profile: ProviderProfileRecord | null;
+    hourlyRateAvailable: boolean;
+  }> {
+    const hourlyRateAvailable = await this.isHourlyRateColumnAvailable();
+    const profile = (await this.prisma.providerProfile.findUnique({
+      where: { userId },
+      select: this.getProviderProfileSelect(hourlyRateAvailable),
+    })) as ProviderProfileRecord | null;
+
+    return { profile, hourlyRateAvailable };
+  }
+
+  private getProviderProfileSelect(
+    includeHourlyRate: boolean,
+  ): Prisma.ProviderProfileSelect {
+    const baseSelect: Prisma.ProviderProfileSelect = {
+      id: true,
+      displayName: true,
+      description: true,
+      cityId: true,
+      createdAt: true,
+      updatedAt: true,
+      city: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    };
+
+    if (includeHourlyRate) {
+      return {
+        ...baseSelect,
+        hourlyRate: true,
+      };
+    }
+
+    return { ...baseSelect };
+  }
+
+  private mapProviderProfileToDto(
+    providerProfile: ProviderProfileRecord,
+  ): ProviderProfileDto {
+    return {
+      id: providerProfile.id,
+      displayName: providerProfile.displayName,
+      description: providerProfile.description ?? null,
+      cityId: providerProfile.cityId ?? null,
+      cityName: providerProfile.city?.name ?? null,
+      hourlyRate: this.normalizeHourlyRate(providerProfile),
+      createdAt: providerProfile.createdAt,
+      updatedAt: providerProfile.updatedAt,
+    };
+  }
+
+  private async isHourlyRateColumnAvailable(): Promise<boolean> {
+    if (this.hourlyRateColumnAvailable !== undefined) {
+      return this.hourlyRateColumnAvailable;
+    }
+
+    if (!this.prisma.isDatabaseAvailable) {
+      this.hourlyRateColumnAvailable = false;
+      return this.hourlyRateColumnAvailable;
+    }
+
+    try {
+      const result = await this.prisma.$queryRaw<
+        { exists: boolean }[]
+      >(Prisma.sql`SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'ProviderProfile'
+              AND column_name = 'hourlyRate'
+          ) AS "exists";`);
+
+      this.hourlyRateColumnAvailable = Boolean(result.at(0)?.exists);
+
+      if (!this.hourlyRateColumnAvailable) {
+        this.logger.warn(
+          'ProviderProfile.hourlyRate column is missing. Hourly rate data will be omitted until the database migration is applied.',
+        );
+      }
+    } catch (error) {
+      this.hourlyRateColumnAvailable = false;
+      this.logger.warn(
+        'Unable to verify ProviderProfile.hourlyRate column existence. Assuming it is absent.',
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
+
+    return this.hourlyRateColumnAvailable;
   }
 }
