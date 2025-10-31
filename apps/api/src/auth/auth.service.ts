@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -63,7 +64,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new NotFoundException('User not found');
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -76,6 +77,32 @@ export class AuthService {
     }
 
     return this.signToken(user.id, user.email, user.role);
+  }
+
+  async getUnreadMessagesCount(userId: string): Promise<number> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const unreadCount = await this.prisma.chatMessage.count({
+      where: {
+        isRead: false,
+        senderId: { not: userId },
+        order: {
+          OR: [
+            { customerProfile: { userId } },
+            { items: { some: { providerProfile: { userId } } } },
+          ],
+        },
+      },
+    });
+
+    return unreadCount;
   }
 
   private async signToken(

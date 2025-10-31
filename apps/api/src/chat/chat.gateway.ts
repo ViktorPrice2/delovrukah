@@ -104,11 +104,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       orderId: message.orderId,
       senderId: message.senderId,
       text: message.text,
+      isRead: message.isRead,
       createdAt: message.createdAt,
       updatedAt: message.updatedAt,
     };
 
-    this.server.to(this.getRoomName(orderId)).emit('newMessage', payload);
+    const room = this.getRoomName(orderId);
+    this.server.to(room).emit('newMessage', payload);
+    this.server.to(room).emit('notification:new-message', payload);
 
     return payload;
   }

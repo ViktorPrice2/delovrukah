@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Role } from '@prisma/client';
-import type { Prisma, Price } from '@prisma/client';
+import type { ChatMessage, Prisma, Price } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 
@@ -27,6 +27,7 @@ export interface ChatMessageResponseDto {
   orderId: string;
   senderId: string;
   text: string;
+  isRead: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -180,14 +181,43 @@ export class OrdersService {
       orderBy: { createdAt: 'asc' },
     });
 
-    return messages.map((message) => ({
-      id: message.id,
-      orderId: message.orderId,
-      senderId: message.senderId,
-      text: message.text,
-      createdAt: message.createdAt,
-      updatedAt: message.updatedAt,
-    }));
+    return messages.map((message) => this.mapChatMessage(message));
+  }
+
+  async markMessagesAsRead(
+    userId: string,
+    orderId: string,
+    messageIds: string[],
+  ): Promise<ChatMessageResponseDto[]> {
+    if (messageIds.length === 0) {
+      return [];
+    }
+
+    const uniqueMessageIds = Array.from(new Set(messageIds));
+
+    const context = await this.getUserContext(userId);
+    await this.findAuthorizedOrder(context, orderId);
+
+    await this.prisma.chatMessage.updateMany({
+      where: {
+        id: { in: uniqueMessageIds },
+        orderId,
+        isRead: false,
+        NOT: { senderId: userId },
+      },
+      data: { isRead: true },
+    });
+
+    const messages = await this.prisma.chatMessage.findMany({
+      where: {
+        id: { in: uniqueMessageIds },
+        orderId,
+        NOT: { senderId: userId },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return messages.map((message) => this.mapChatMessage(message));
   }
 
   private mapPrices(prices: Price[]): Map<string, Price> {
@@ -217,6 +247,18 @@ export class OrdersService {
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       })),
+    };
+  }
+
+  private mapChatMessage(message: ChatMessage): ChatMessageResponseDto {
+    return {
+      id: message.id,
+      orderId: message.orderId,
+      senderId: message.senderId,
+      text: message.text,
+      isRead: message.isRead,
+      createdAt: message.createdAt,
+      updatedAt: message.updatedAt,
     };
   }
 
