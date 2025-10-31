@@ -18,31 +18,35 @@ function sanitizeValue(value: unknown): unknown {
 
 export class AppLogger extends ConsoleLogger {
   constructor(context?: string) {
-    super(context, { timestamp: false });
+    if (context) {
+      super(context, { timestamp: false });
+    } else {
+      super({ timestamp: false });
+    }
   }
 
   log(message: unknown, context?: string): void {
-    super.log(this.formatMessage('log', message, context));
+    super.log(this.formatPayload('log', message, context));
   }
 
   warn(message: unknown, context?: string): void {
-    super.warn(this.formatMessage('warn', message, context));
+    super.warn(this.formatPayload('warn', message, context));
   }
 
   error(message: unknown, stack?: string, context?: string): void {
-    const formatted = this.formatMessage('error', message, context, stack);
+    const formatted = this.formatPayload('error', message, context, stack);
     super.error(formatted);
   }
 
   debug(message: unknown, context?: string): void {
-    super.debug(this.formatMessage('debug', message, context));
+    super.debug(this.formatPayload('debug', message, context));
   }
 
   verbose(message: unknown, context?: string): void {
-    super.verbose(this.formatMessage('verbose', message, context));
+    super.verbose(this.formatPayload('verbose', message, context));
   }
 
-  private formatMessage(
+  private formatPayload(
     level: LogLevel,
     message: unknown,
     context?: string,
