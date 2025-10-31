@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import type { Prisma, Price } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -21,9 +22,24 @@ export interface OrderResponseDto {
   items: OrderItemResponseDto[];
 }
 
+export interface ChatMessageResponseDto {
+  id: string;
+  orderId: string;
+  senderId: string;
+  text: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 type OrderWithItems = Prisma.OrderGetPayload<{
   include: { items: true };
 }>;
+
+interface UserContext {
+  role: Role;
+  customerProfileId: string | null;
+  providerProfileId: string | null;
+}
 
 @Injectable()
 export class OrdersService {
@@ -114,28 +130,64 @@ export class OrdersService {
     return this.mapOrder(order);
   }
 
+  async getOrders(userId: string): Promise<OrderResponseDto[]> {
+    const context = await this.getUserContext(userId);
+
+    let orders: OrderWithItems[] = [];
+
+    if (context.role === Role.CUSTOMER) {
+      const customerProfileId = context.customerProfileId!;
+      orders = await this.prisma.order.findMany({
+        where: { customerProfileId },
+        include: { items: true },
+        orderBy: { createdAt: 'desc' },
+      });
+    } else if (context.role === Role.PROVIDER) {
+      const providerProfileId = context.providerProfileId!;
+      orders = await this.prisma.order.findMany({
+        where: {
+          items: {
+            some: { providerProfileId },
+          },
+        },
+        include: { items: true },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    return orders.map((order) => this.mapOrder(order));
+  }
+
   async getOrderById(
     userId: string,
     orderId: string,
   ): Promise<OrderResponseDto> {
-    const customerProfile = await this.prisma.customerProfile.findUnique({
-      where: { userId },
-    });
-
-    if (!customerProfile) {
-      throw new NotFoundException('Customer profile not found');
-    }
-
-    const order = await this.prisma.order.findUnique({
-      where: { id: orderId },
-      include: { items: true },
-    });
-
-    if (!order || order.customerProfileId !== customerProfile.id) {
-      throw new NotFoundException('Order not found');
-    }
+    const context = await this.getUserContext(userId);
+    const order = await this.findAuthorizedOrder(context, orderId);
 
     return this.mapOrder(order);
+  }
+
+  async getOrderMessages(
+    userId: string,
+    orderId: string,
+  ): Promise<ChatMessageResponseDto[]> {
+    const context = await this.getUserContext(userId);
+    await this.findAuthorizedOrder(context, orderId);
+
+    const messages = await this.prisma.chatMessage.findMany({
+      where: { orderId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return messages.map((message) => ({
+      id: message.id,
+      orderId: message.orderId,
+      senderId: message.senderId,
+      text: message.text,
+      createdAt: message.createdAt,
+      updatedAt: message.updatedAt,
+    }));
   }
 
   private mapPrices(prices: Price[]): Map<string, Price> {
@@ -173,5 +225,78 @@ export class OrdersService {
     serviceTemplateVersionId: string,
   ): string {
     return `${providerId}:${serviceTemplateVersionId}`;
+  }
+
+  private async getUserContext(userId: string): Promise<UserContext> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        role: true,
+        customerProfile: { select: { id: true } },
+        providerProfile: { select: { id: true } },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role === Role.CUSTOMER && !user.customerProfile) {
+      throw new NotFoundException('Customer profile not found');
+    }
+
+    if (user.role === Role.PROVIDER && !user.providerProfile) {
+      throw new NotFoundException('Provider profile not found');
+    }
+
+    return {
+      role: user.role,
+      customerProfileId: user.customerProfile?.id ?? null,
+      providerProfileId: user.providerProfile?.id ?? null,
+    };
+  }
+
+  private async findAuthorizedOrder(
+    context: UserContext,
+    orderId: string,
+  ): Promise<OrderWithItems> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (!this.isUserParticipant(context, order)) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return order;
+  }
+
+  private isUserParticipant(
+    context: UserContext,
+    order: OrderWithItems,
+  ): boolean {
+    if (context.role === Role.CUSTOMER) {
+      return (
+        !!context.customerProfileId &&
+        order.customerProfileId === context.customerProfileId
+      );
+    }
+
+    if (context.role === Role.PROVIDER) {
+      if (!context.providerProfileId) {
+        return false;
+      }
+
+      return order.items.some(
+        (item) => item.providerProfileId === context.providerProfileId,
+      );
+    }
+
+    return false;
   }
 }
