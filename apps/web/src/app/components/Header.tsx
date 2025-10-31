@@ -28,11 +28,33 @@ function CartIcon() {
   );
 }
 
+function MessagesIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 6.75A2.75 2.75 0 0 1 5.75 4h12.5A2.75 2.75 0 0 1 21 6.75v10.5A2.75 2.75 0 0 1 18.25 20H5.75A2.75 2.75 0 0 1 3 17.25z"
+      />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m4 7 8 6 8-6" />
+    </svg>
+  );
+}
+
 export default function Header() {
-  const { user, isLoading, logout } = useAuth((state) => ({
+  const { user, isLoading, logout, unreadCount } = useAuth((state) => ({
     user: state.user,
     isLoading: state.isLoading,
     logout: state.logout,
+    unreadCount: state.unreadCount,
   }));
   const cartCount = useCartStore((state) =>
     state.items.reduce((total, item) => total + item.quantity, 0),
@@ -57,6 +79,21 @@ export default function Header() {
           <CurrentCityDisplay />
         </div>
         <nav className="flex items-center gap-3 text-sm font-medium">
+          <Link
+            href={user ? '/orders' : '/signin'}
+            className="relative inline-flex items-center gap-2 rounded-md border border-transparent px-3 py-2 transition hover:border-slate-200 hover:bg-slate-100"
+            aria-label="Сообщения"
+          >
+            <span className="relative inline-flex items-center">
+              <MessagesIcon />
+              {user && unreadCount > 0 ? (
+                <span className="absolute -right-2 -top-2 inline-flex min-h-[1.25rem] min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1 text-[0.625rem] font-semibold leading-none text-white">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              ) : null}
+            </span>
+            <span className="hidden sm:inline">Сообщения</span>
+          </Link>
           <Link
             href="/checkout"
             className="relative inline-flex items-center gap-2 rounded-md border border-transparent px-3 py-2 transition hover:border-slate-200 hover:bg-slate-100"

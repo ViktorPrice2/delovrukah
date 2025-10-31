@@ -14,6 +14,7 @@ export interface ChatMessage {
   senderId: string;
   senderName?: string;
   createdAt: string;
+  isRead?: boolean;
 }
 
 interface RawServerMessage extends Partial<ChatMessage> {
@@ -28,6 +29,7 @@ interface RawServerMessage extends Partial<ChatMessage> {
 
 interface ServerToClientEvents {
   newMessage: (message: RawServerMessage) => void;
+  "notification:new-message": (message: RawServerMessage) => void;
 }
 
 interface ClientToServerEvents {
@@ -86,11 +88,16 @@ function normalizeServerMessage(
     senderId: senderIdCandidate,
     senderName: senderNameCandidate,
     createdAt: normalizedCreatedAt,
+    isRead: typeof raw.isRead === "boolean" ? raw.isRead : false,
   };
 }
 
 export function useChat(orderId: string | undefined) {
-  const token = useAuth((state) => state.token);
+  const { token, userId, incrementUnreadCount } = useAuth((state) => ({
+    token: state.token,
+    userId: state.user?.id,
+    incrementUnreadCount: state.incrementUnreadCount,
+  }));
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -142,15 +149,44 @@ export function useChat(orderId: string | undefined) {
       });
     });
 
+    socket.on("notification:new-message", (message) => {
+      if (!userId) {
+        return;
+      }
+
+      const normalized = normalizeServerMessage(message, orderId);
+      if (normalized.senderId === userId) {
+        return;
+      }
+
+      incrementUnreadCount();
+    });
+
     return () => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [orderId, token]);
+  }, [orderId, token, userId, incrementUnreadCount]);
 
   const initializeMessages = useCallback((history: ChatMessage[]) => {
     setMessages(
-      [...history].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      [...history].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      ),
+    );
+  }, []);
+
+  const markMessagesAsReadLocally = useCallback((messageIds: string[]) => {
+    if (messageIds.length === 0) {
+      return;
+    }
+
+    setMessages((prev) =>
+      prev.map((message) =>
+        messageIds.includes(message.id)
+          ? { ...message, isRead: true }
+          : message,
+      ),
     );
   }, []);
 
@@ -175,6 +211,7 @@ export function useChat(orderId: string | undefined) {
   return {
     messages,
     initializeMessages,
+    markMessagesAsReadLocally,
     sendMessage,
     isConnected,
     connectionError,

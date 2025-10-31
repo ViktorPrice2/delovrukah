@@ -121,12 +121,17 @@ export function AuthForm({
       }
 
       // Декодируем токен, чтобы получить базовую информацию о пользователе
-      const decodedToken: { email: string; role: 'CUSTOMER' | 'PROVIDER' } = jwtDecode(token);
+      const decodedToken: {
+        sub: string;
+        email: string;
+        role: 'CUSTOMER' | 'PROVIDER';
+      } = jwtDecode(token);
 
       // Вызываем действие `login` из нашего Zustand store
       login({
         token,
         user: {
+          id: decodedToken.sub,
           email: decodedToken.email,
           role: decodedToken.role,
         },
