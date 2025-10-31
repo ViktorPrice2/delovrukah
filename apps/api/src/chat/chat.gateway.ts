@@ -111,10 +111,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private async getAuthenticatedUser(
     client: AuthenticatedSocket,
   ): Promise<JwtPayload> {
-    if (!client.user) {
-      await this.wsJwtGuard.validateClient(client);
+    if (client.user) {
+      return client.user;
     }
-    return client.user;
+
+    return this.wsJwtGuard.validateClient(client);
   }
 
   private getRoomName(orderId: string): string {
