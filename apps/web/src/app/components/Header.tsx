@@ -43,13 +43,7 @@ export default function Header() {
       return '/profile';
     }
 
-    switch (user.role) {
-      case 'CUSTOMER':
-      case 'PROVIDER':
-        return '/profile';
-      default:
-        return '/profile';
-    }
+    return user.role === 'PROVIDER' ? '/profile' : '/orders';
   }, [user]);
 
   return (

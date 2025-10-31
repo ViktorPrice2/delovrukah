@@ -9,7 +9,10 @@ export const metadata: Metadata = {
 export default function SignUpPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-4 py-12">
-      <AuthForm mode="signup" />
+      <AuthForm
+        mode="signup"
+        description="Создайте учетную запись и выберите подходящую роль"
+      />
     </main>
   );
 }
