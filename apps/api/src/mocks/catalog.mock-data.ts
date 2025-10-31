@@ -27,6 +27,11 @@ const ELECTRICAL_SERVICE_VERSION: ServiceVersionDto = {
   title: 'Базовый пакет диагностики',
   description:
     'Комплексная проверка электропроводки с применением тепловизора и измерением сопротивления изоляции.',
+  whatsIncluded: [],
+  whatsNotIncluded: [],
+  unitOfMeasure: '',
+  requiredTools: [],
+  customerRequirements: [],
   isActive: true,
   createdAt: new Date('2024-01-10T10:00:00.000Z'),
   updatedAt: new Date('2024-01-10T10:00:00.000Z'),
@@ -62,6 +67,7 @@ const ELECTRICAL_SERVICE: ServiceDetailDto = {
   authorId: null,
   keeperId: null,
   category: ELECTRICAL_CATEGORY,
+  medianPrice: null,
   providers: NOVOSIBIRSK_PROVIDERS,
 };
 
@@ -137,6 +143,7 @@ function createSummary(service: ServiceDetailDto): ServiceSummaryDto {
     description: service.description ?? null,
     slug: service.slug,
     latestVersion: cloneVersion(service.latestVersion),
+    medianPrice: service.medianPrice ?? null,
   };
 }
 
