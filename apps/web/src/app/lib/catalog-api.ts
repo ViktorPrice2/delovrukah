@@ -1,5 +1,11 @@
 import { getApiBaseUrl } from "@/lib/get-api-base-url";
 import type { Category, City, ServiceDetail } from "../types/catalog.types";
+import {
+  findMockServiceBySlugOrId,
+  getMockCategories,
+  getMockCities,
+  getMockServicesByCategorySlug,
+} from "./mock-data";
 
 /**
  * Обертка для fetch, которая обрабатывает ответы от API.
@@ -43,23 +49,58 @@ async function fetchFromApi<T>(path: string): Promise<T | null> {
 export async function getCities(): Promise<City[]> {
   const cities = await fetchFromApi<City[]>("/cities");
 
-  if (!cities) {
-    throw new Error("Cities data is unavailable");
+  if (cities && cities.length > 0) {
+    return cities;
   }
 
-  return cities;
+  const fallback = getMockCities();
+
+  if (fallback.length > 0) {
+    console.warn("Falling back to mock city data because the API is unavailable.");
+    return fallback;
+  }
+
+  throw new Error("Cities data is unavailable");
 }
 
 export async function getCategories(citySlug: string): Promise<Category[]> {
   const categories = await fetchFromApi<Category[]>(`/categories?citySlug=${encodeURIComponent(citySlug)}`);
-  return categories ?? [];
+
+  if (categories && categories.length > 0) {
+    return categories;
+  }
+
+  const fallback = getMockCategories();
+
+  if (fallback.length > 0) {
+    console.warn(
+      `Falling back to mock category data for city "${citySlug}" because the API is unavailable.`,
+    );
+    return fallback;
+  }
+
+  return [];
 }
 
 export async function getServicesByCategory(citySlug: string, categorySlug: string): Promise<ServiceDetail[]> {
   const services = await fetchFromApi<ServiceDetail[]>(
     `/services?citySlug=${encodeURIComponent(citySlug)}&categorySlug=${encodeURIComponent(categorySlug)}`
   );
-  return services ?? [];
+
+  if (services && services.length > 0) {
+    return services;
+  }
+
+  const fallback = getMockServicesByCategorySlug(categorySlug, citySlug);
+
+  if (fallback.length > 0) {
+    console.warn(
+      `Falling back to mock services for category "${categorySlug}" in city "${citySlug}" because the API is unavailable.`,
+    );
+    return fallback;
+  }
+
+  return [];
 }
 
 /**
@@ -74,6 +115,27 @@ export async function getServiceDetailsBySlug(
   fallbackId?: string
 ): Promise<ServiceDetail | null> {
   const normalizedSlug = serviceSlug?.trim();
+  const normalizedFallback = fallbackId?.trim();
+
+  const tryMockFallback = (): ServiceDetail | null => {
+    const candidates = [normalizedSlug, normalizedFallback].filter(
+      (value): value is string => Boolean(value && value.length > 0)
+    );
+
+    for (const candidate of candidates) {
+      const mockService = findMockServiceBySlugOrId(candidate, citySlug);
+
+      if (mockService) {
+        console.warn(
+          `Falling back to mock service data for "${candidate}" in city "${citySlug}" because the API is unavailable.`
+        );
+        return mockService;
+      }
+    }
+
+    return null;
+  };
+
   let primary: ServiceDetail | null = null;
 
   if (normalizedSlug) {
@@ -81,24 +143,29 @@ export async function getServiceDetailsBySlug(
       `/services/${encodeURIComponent(normalizedSlug)}?citySlug=${encodeURIComponent(citySlug)}`
     );
 
-    if (primary || !fallbackId) {
+    if (primary) {
       return primary;
     }
-  } else if (!fallbackId) {
+  } else if (!normalizedFallback) {
     // Нечего искать: слаг не передан и альтернативный идентификатор отсутствует.
-    return null;
+    return tryMockFallback();
   }
 
-  const normalizedFallback = fallbackId?.trim();
   if (!normalizedFallback || normalizedFallback.length === 0) {
-    return primary;
+    return primary ?? tryMockFallback();
   }
 
   if (normalizedSlug && normalizedFallback === normalizedSlug) {
-    return primary;
+    return primary ?? tryMockFallback();
   }
 
-  return fetchFromApi<ServiceDetail>(
+  const fallbackService = await fetchFromApi<ServiceDetail>(
     `/services/${encodeURIComponent(normalizedFallback)}?citySlug=${encodeURIComponent(citySlug)}`
   );
+
+  if (fallbackService) {
+    return fallbackService;
+  }
+
+  return tryMockFallback();
 }
