@@ -3,14 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
-import { JwtPayload } from '../auth/jwt.strategy';
+import { JwtPayload } from './jwt.strategy';
 
 export interface AuthenticatedSocket extends Socket {
   user?: JwtPayload;
 }
 
 @Injectable()
-export class WsJwtGuard implements CanActivate {
+export class WsAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,

@@ -14,12 +14,12 @@ import {
   OrdersService,
 } from '../orders/orders.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuthenticatedSocket, WsJwtGuard } from './ws-jwt.guard';
 import { UseGuards } from '@nestjs/common';
 import { JwtPayload } from '../auth/jwt.strategy';
+import { AuthenticatedSocket, WsAuthGuard } from '../auth/ws-auth.guard';
 
 @WebSocketGateway({ cors: { origin: '*' } })
-@UseGuards(WsJwtGuard)
+@UseGuards(WsAuthGuard)
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
@@ -27,13 +27,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ordersService: OrdersService,
-    private readonly wsJwtGuard: WsJwtGuard,
+    private readonly wsAuthGuard: WsAuthGuard,
   ) {}
 
   async handleConnection(client: AuthenticatedSocket): Promise<void> {
     try {
       console.log('[ChatGateway] handleConnection start', client.id);
-      const payload = await this.wsJwtGuard.validateClient(client);
+      const payload = await this.wsAuthGuard.validateClient(client);
       console.log('[ChatGateway] handleConnection success', client.id, payload.sub);
     } catch (error) {
       console.log('[ChatGateway] handleConnection error', client.id, error);
@@ -115,7 +115,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return client.user;
     }
 
-    return this.wsJwtGuard.validateClient(client);
+    return this.wsAuthGuard.validateClient(client);
   }
 
   private getRoomName(orderId: string): string {
