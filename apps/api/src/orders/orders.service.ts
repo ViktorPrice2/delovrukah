@@ -47,7 +47,10 @@ export class OrdersService {
     >();
 
     for (const service of dto.services) {
-      const key = this.getServiceKey(service.providerId, service.serviceTemplateVersionId);
+      const key = this.getServiceKey(
+        service.providerId,
+        service.serviceTemplateVersionId,
+      );
       if (!uniqueServiceKeys.has(key)) {
         uniqueServiceKeys.set(key, {
           providerId: service.providerId,
@@ -165,7 +168,10 @@ export class OrdersService {
     };
   }
 
-  private getServiceKey(providerId: string, serviceTemplateVersionId: string): string {
+  private getServiceKey(
+    providerId: string,
+    serviceTemplateVersionId: string,
+  ): string {
     return `${providerId}:${serviceTemplateVersionId}`;
   }
 }

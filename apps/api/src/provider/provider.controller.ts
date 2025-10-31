@@ -32,6 +32,11 @@ export class ProviderController {
     return this.providerService.getProviderCatalog(req.user.sub);
   }
 
+  @Get('profile')
+  getProfile(@Req() req: RequestWithUser): Promise<ProviderProfileDto> {
+    return this.providerService.getProfile(req.user.sub);
+  }
+
   @Put('profile')
   updateProfile(
     @Req() req: RequestWithUser,

@@ -18,13 +18,19 @@ export const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    // Мы используем Zustand, поэтому будем брать токен из него, а не напрямую из localStorage.
-    // Пока оставим так, но в будущем улучшим.
-    const token = typeof window !== 'undefined'
-      ? localStorage.getItem('auth-token')
-      : null;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (typeof window !== 'undefined') {
+      try {
+        const persistedAuth = localStorage.getItem('auth-storage');
+        if (persistedAuth) {
+          const parsed = JSON.parse(persistedAuth);
+          const token = parsed?.state?.token as string | undefined;
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to read auth token from storage', error);
+      }
     }
     return config;
   },

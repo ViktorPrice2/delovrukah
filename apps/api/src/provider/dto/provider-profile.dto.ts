@@ -3,6 +3,7 @@ export interface ProviderProfileDto {
   displayName: string;
   description: string | null;
   cityId: string | null;
+  cityName: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

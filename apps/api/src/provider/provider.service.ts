@@ -14,6 +14,7 @@ export class ProviderService {
   async getProviderPrices(userId: string): Promise<ProviderPriceDto[]> {
     const providerProfile = await this.prisma.providerProfile.findUnique({
       where: { userId },
+      include: { city: true },
     });
 
     if (!providerProfile) {
@@ -39,6 +40,7 @@ export class ProviderService {
   ): Promise<ProviderCatalogCategoryDto[]> {
     const providerProfile = await this.prisma.providerProfile.findUnique({
       where: { userId },
+      include: { city: true },
     });
 
     if (!providerProfile) {
@@ -66,10 +68,10 @@ export class ProviderService {
     });
 
     const priceMap = new Map<string, number>(
-      prices.map((price) => [
-        price.serviceTemplateVersionId,
-        price.price.toNumber(),
-      ] as const),
+      prices.map(
+        (price) =>
+          [price.serviceTemplateVersionId, price.price.toNumber()] as const,
+      ),
     );
 
     return categories.map((category) => ({
@@ -139,6 +141,7 @@ export class ProviderService {
         displayName: providerProfile.displayName,
         description: providerProfile.description ?? null,
         cityId: providerProfile.cityId ?? null,
+        cityName: providerProfile.city?.name ?? null,
         createdAt: providerProfile.createdAt,
         updatedAt: providerProfile.updatedAt,
       };
@@ -147,6 +150,7 @@ export class ProviderService {
     const updatedProfile = await this.prisma.providerProfile.update({
       where: { id: providerProfile.id },
       data,
+      include: { city: true },
     });
 
     return {
@@ -154,6 +158,7 @@ export class ProviderService {
       displayName: updatedProfile.displayName,
       description: updatedProfile.description ?? null,
       cityId: updatedProfile.cityId ?? null,
+      cityName: updatedProfile.city?.name ?? null,
       createdAt: updatedProfile.createdAt,
       updatedAt: updatedProfile.updatedAt,
     };
@@ -194,6 +199,27 @@ export class ProviderService {
       price: price.price.toNumber(),
       createdAt: price.createdAt,
       updatedAt: price.updatedAt,
+    };
+  }
+
+  async getProfile(userId: string): Promise<ProviderProfileDto> {
+    const providerProfile = await this.prisma.providerProfile.findUnique({
+      where: { userId },
+      include: { city: true },
+    });
+
+    if (!providerProfile) {
+      throw new NotFoundException('Provider profile not found');
+    }
+
+    return {
+      id: providerProfile.id,
+      displayName: providerProfile.displayName,
+      description: providerProfile.description ?? null,
+      cityId: providerProfile.cityId ?? null,
+      cityName: providerProfile.city?.name ?? null,
+      createdAt: providerProfile.createdAt,
+      updatedAt: providerProfile.updatedAt,
     };
   }
 }

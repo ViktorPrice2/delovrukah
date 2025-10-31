@@ -11,7 +11,9 @@ type LegacyDecoratorArgs = [
 
 type NewDecoratorContext = { kind: string };
 
-function isNewDecoratorArgs(args: unknown[]): args is [unknown, NewDecoratorContext] {
+function isNewDecoratorArgs(
+  args: unknown[],
+): args is [unknown, NewDecoratorContext] {
   return (
     args.length === 2 &&
     typeof args[1] === 'object' &&
@@ -34,7 +36,11 @@ export const Roles = (...roles: Role[]): ClassDecorator & MethodDecorator => {
         return value;
       }
 
-      if (context.kind === 'method' || context.kind === 'getter' || context.kind === 'setter') {
+      if (
+        context.kind === 'method' ||
+        context.kind === 'getter' ||
+        context.kind === 'setter'
+      ) {
         Reflect.defineMetadata(ROLES_KEY, roles, value as object);
         return value;
       }

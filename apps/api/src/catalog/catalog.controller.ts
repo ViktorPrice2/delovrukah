@@ -1,4 +1,10 @@
-import { Controller, Get, NotFoundException, Param, Query } from '@nestjs/common'; // <-- Добавляем NotFoundException
+import {
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Query,
+} from '@nestjs/common'; // <-- Добавляем NotFoundException
 import { CatalogService } from './catalog.service';
 import { CategoryDto } from './dto/category.dto';
 import { ServiceDetailDto, ServiceSummaryDto } from './dto/service.dto';
@@ -24,7 +30,10 @@ export class CatalogController {
     @Query('citySlug') citySlug: string,
     @Query('categorySlug') categorySlug: string,
   ): Promise<ServiceDetailDto[]> {
-    return this.catalogService.getServicesByCategorySlug(citySlug, categorySlug);
+    return this.catalogService.getServicesByCategorySlug(
+      citySlug,
+      categorySlug,
+    );
   }
 
   // --- НАЧАЛО ИЗМЕНЕНИЙ ---
@@ -32,8 +41,12 @@ export class CatalogController {
   async findOne(
     @Param('slugOrId') slugOrId: string,
     @Query('citySlug') citySlug?: string,
-  ): Promise<ServiceDetailDto> { // <-- Тип Promise<ServiceDetailDto> оставляем, это правильно для успешного ответа
-    const service = await this.catalogService.getServiceBySlugOrId(slugOrId, citySlug);
+  ): Promise<ServiceDetailDto> {
+    // <-- Тип Promise<ServiceDetailDto> оставляем, это правильно для успешного ответа
+    const service = await this.catalogService.getServiceBySlugOrId(
+      slugOrId,
+      citySlug,
+    );
 
     // Если сервис вернул null, выбрасываем стандартную ошибку NestJS
     if (!service) {
