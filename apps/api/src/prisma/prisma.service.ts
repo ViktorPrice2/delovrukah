@@ -1,5 +1,5 @@
 // Этот код ПРАВИЛЬНЫЙ
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
@@ -7,15 +7,58 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
+  private readonly logger = new Logger(PrismaService.name);
+  private isAvailable: boolean;
+
   constructor() {
-    super();
+    const databaseUrl = process.env.DATABASE_URL?.trim();
+
+    super(
+      databaseUrl
+        ? {
+            datasources: {
+              db: {
+                url: databaseUrl,
+              },
+            },
+          }
+        : undefined,
+    );
+
+    this.isAvailable = Boolean(databaseUrl);
+
+    if (!this.isAvailable) {
+      this.logger.warn(
+        'DATABASE_URL is not defined. Prisma client will run in disabled mode and mock data will be used instead.',
+      );
+    }
+  }
+
+  get isDatabaseAvailable(): boolean {
+    return this.isAvailable;
   }
 
   async onModuleInit() {
-    await this.$connect();
+    if (!this.isAvailable) {
+      return;
+    }
+
+    try {
+      await this.$connect();
+    } catch (error) {
+      this.isAvailable = false;
+      this.logger.error(
+        'Failed to connect to the database. Prisma client will be disabled and mock data will be used.',
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
   }
 
   async onModuleDestroy() {
+    if (!this.isAvailable) {
+      return;
+    }
+
     await this.$disconnect();
   }
 }

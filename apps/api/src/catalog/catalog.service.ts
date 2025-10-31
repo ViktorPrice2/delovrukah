@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   Category,
   City,
@@ -9,6 +9,14 @@ import {
 } from '@prisma/client';
 import { CityDto } from '../geo/dto/city.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  findMockCategoryById,
+  findMockServiceBySlugOrId,
+  getDefaultCitySlug,
+  getMockCategories,
+  getMockServiceSummariesByCategoryId,
+  getMockServicesByCategorySlug,
+} from '../mocks/catalog.mock-data';
 import { CategoryDto } from './dto/category.dto';
 import {
   ServiceDetailDto,
@@ -19,19 +27,42 @@ import {
 
 @Injectable()
 export class CatalogService {
+  private readonly logger = new Logger(CatalogService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async getCategories(): Promise<CategoryDto[]> {
-    const categories = await this.prisma.category.findMany({
-      orderBy: { name: 'asc' },
-    });
-    return categories.map((category) => this.mapCategory(category));
+    if (!this.prisma.isDatabaseAvailable) {
+      this.logger.warn('Database is unavailable. Serving mock categories.');
+      return getMockCategories();
+    }
+
+    try {
+      const categories = await this.prisma.category.findMany({
+        orderBy: { name: 'asc' },
+      });
+      return categories.map((category) => this.mapCategory(category));
+    } catch (error) {
+      this.logger.error(
+        'Failed to load categories from the database. Falling back to mock data.',
+        error instanceof Error ? error.stack : undefined,
+      );
+      return getMockCategories();
+    }
   }
 
   // Этот метод остается для обратной совместимости или внутреннего использования
   async getServicesByCategory(
     categoryId: string,
   ): Promise<ServiceSummaryDto[]> {
+    if (!this.prisma.isDatabaseAvailable) {
+      const category = findMockCategoryById(categoryId);
+      if (!category) {
+        throw new NotFoundException('Категория не найдена');
+      }
+      return getMockServiceSummariesByCategoryId(categoryId);
+    }
+
     // ... (код этого метода без изменений)
     const category = await this.prisma.category.findUnique({
       where: { id: categoryId },
@@ -58,31 +89,46 @@ export class CatalogService {
     citySlug: string,
     categorySlug: string,
   ): Promise<ServiceDetailDto[]> {
-    const services = await this.prisma.serviceTemplate.findMany({
-      where: {
-        category: {
-          slug: categorySlug,
-        },
-      },
-      orderBy: { name: 'asc' },
-    });
-
-    if (!services || services.length === 0) {
-      // Возвращаем пустой массив, если услуги в категории не найдены.
-      // Фронтенд обработает это и покажет notFound().
-      return [];
+    if (!this.prisma.isDatabaseAvailable) {
+      this.logger.warn(
+        `Database is unavailable. Serving mock services for category "${categorySlug}" in city "${citySlug}".`,
+      );
+      return getMockServicesByCategorySlug(categorySlug, citySlug);
     }
 
-    // Для каждой найденной услуги асинхронно получаем ее детали
-    // (включая провайдеров в нужном городе)
-    const detailedServicesPromises = services.map((service) =>
-      this.getServiceBySlugOrId(service.slug, citySlug),
-    );
+    try {
+      const services = await this.prisma.serviceTemplate.findMany({
+        where: {
+          category: {
+            slug: categorySlug,
+          },
+        },
+        orderBy: { name: 'asc' },
+      });
 
-    const detailedServices = await Promise.all(detailedServicesPromises);
+      if (!services || services.length === 0) {
+        // Возвращаем пустой массив, если услуги в категории не найдены.
+        // Фронтенд обработает это и покажет notFound().
+        return [];
+      }
 
-    // Отфильтровываем возможные null, если какая-то услуга вдруг не нашлась
-    return detailedServices.filter((s): s is ServiceDetailDto => s !== null);
+      // Для каждой найденной услуги асинхронно получаем ее детали
+      // (включая провайдеров в нужном городе)
+      const detailedServicesPromises = services.map((service) =>
+        this.getServiceBySlugOrId(service.slug, citySlug),
+      );
+
+      const detailedServices = await Promise.all(detailedServicesPromises);
+
+      // Отфильтровываем возможные null, если какая-то услуга вдруг не нашлась
+      return detailedServices.filter((s): s is ServiceDetailDto => s !== null);
+    } catch (error) {
+      this.logger.error(
+        `Failed to load services for category "${categorySlug}" from the database. Falling back to mock data.`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      return getMockServicesByCategorySlug(categorySlug, citySlug);
+    }
   }
   // --- КОНЕЦ НОВОГО МЕТОДА ---
 
@@ -90,6 +136,15 @@ export class CatalogService {
     slugOrId: string,
     citySlug?: string,
   ): Promise<ServiceDetailDto | null> {
+    const effectiveCitySlug = citySlug ?? getDefaultCitySlug();
+
+    if (!this.prisma.isDatabaseAvailable) {
+      this.logger.warn(
+        `Database is unavailable. Serving mock service for identifier "${slugOrId}" in city "${effectiveCitySlug}".`,
+      );
+      return findMockServiceBySlugOrId(slugOrId, effectiveCitySlug);
+    }
+
     // <-- Изменяем возвращаемый тип на Promise<ServiceDetailDto | null>
     const service = await this.prisma.serviceTemplate.findFirst({
       where: {
@@ -107,7 +162,7 @@ export class CatalogService {
 
     if (!service) {
       // Вместо выбрасывания ошибки, возвращаем null. Фронтенд это обработает.
-      return null;
+      return findMockServiceBySlugOrId(slugOrId, effectiveCitySlug);
     }
 
     // ... (остальная часть метода `getServiceBySlugOrId` без изменений, как в вашем коде)
@@ -144,13 +199,23 @@ export class CatalogService {
           );
       }
     }
-    return {
+    const detailed: ServiceDetailDto = {
       ...summary,
       authorId: service.authorId,
       keeperId: service.keeperId,
       category: this.mapCategory(service.category),
       providers,
     };
+
+    if (!providers || providers.length === 0) {
+      const fallbackCity = citySlug ?? effectiveCitySlug;
+      const mockService = findMockServiceBySlugOrId(service.slug, fallbackCity);
+      if (mockService?.providers?.length) {
+        detailed.providers = mockService.providers;
+      }
+    }
+
+    return detailed;
   }
 
   private mapCategory(category: Category): CategoryDto {
