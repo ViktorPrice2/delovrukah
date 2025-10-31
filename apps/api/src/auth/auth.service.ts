@@ -10,6 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { SigninDto } from './dto/signin.dto';
 import { SignupDto } from './dto/signup.dto';
+import { resolveJwtSecret } from './jwt-secret.util';
 
 @Injectable()
 export class AuthService {
@@ -83,12 +84,7 @@ export class AuthService {
     role: Role,
   ): Promise<{ access_token: string }> {
     const payload = { sub: userId, email, role };
-    const secret = this.configService.get<string>('JWT_SECRET');
-
-    if (!secret) {
-      throw new Error('JWT secret is not configured');
-    }
-
+    const secret = resolveJwtSecret(this.configService);
     const accessToken = await this.jwtService.signAsync(payload, {
       secret,
       expiresIn: '1h',

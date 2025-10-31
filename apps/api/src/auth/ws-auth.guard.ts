@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
 import { JwtPayload } from './jwt.strategy';
+import { resolveJwtSecret } from './jwt-secret.util';
 
 export interface HandshakeData {
   headers: Record<string, string | string[] | undefined>;
@@ -78,12 +79,7 @@ export class WsAuthGuard implements CanActivate {
       throw new WsException('Unauthorized');
     }
 
-    const secret = this.configService.get<string>('JWT_SECRET');
-
-    if (!secret) {
-      this.logger.error('JWT_SECRET is not configured');
-      throw new WsException('Server configuration error');
-    }
+    const secret = resolveJwtSecret(this.configService);
 
     try {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
