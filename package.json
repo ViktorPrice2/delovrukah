@@ -4,6 +4,7 @@
   "scripts": {
     "postinstall": "pnpm dotenv -- pnpm prisma generate",
     "build": "turbo build",
+    "predev": "pnpm db:generate",
     "dev": "turbo dev",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
