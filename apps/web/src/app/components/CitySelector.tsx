@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { City } from "../types/catalog.types"; // Исправлен путь
 
@@ -13,34 +13,20 @@ type CitySelectorProps = {
 export default function CitySelector({ initialCities, error }: CitySelectorProps) {
   const router = useRouter();
   const pathname = usePathname();
-  
-  // Убираем все состояния, связанные с загрузкой (cities, status, errorMessage)
-  // Теперь данные приходят готовыми
-  const [selectedCity, setSelectedCity] = useState<string>("");
+
   const [isNavigating, startTransition] = useTransition();
 
-  // Этот useEffect остается. Он нужен, чтобы <select>
-  // показывал правильный город при навигации по сайту (вперед/назад).
-  useEffect(() => {
-    const segments = pathname.split("/").filter(Boolean);
-    const [citySlug] = segments;
-    if (citySlug) {
-      setSelectedCity(citySlug);
-    } else {
-      setSelectedCity(""); // Сбрасываем выбор, если мы на главной странице
-    }
-  }, [pathname]);
+  const currentCitySlug = pathname.split("/").filter(Boolean)[0] ?? "";
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value;
-    setSelectedCity(value);
-    
+
     // Используем startTransition для плавного перехода без блокировки UI
     startTransition(() => {
       if (value) {
         router.push(`/${value}`);
       } else {
-        router.push('/'); // Если выбрали "Все города", переходим на главную
+        router.push("/"); // Если выбрали "Все города", переходим на главную
       }
     });
   };
@@ -54,7 +40,7 @@ export default function CitySelector({ initialCities, error }: CitySelectorProps
         <select
           id="city-selector"
           className="w-full rounded border bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          value={selectedCity}
+          value={currentCitySlug}
           onChange={handleChange}
           disabled={!!error || isNavigating} // Блокируем, если есть ошибка загрузки или идет навигация
         >
