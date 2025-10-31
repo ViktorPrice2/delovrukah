@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Role } from '@prisma/client';
-import type { ChatMessage, Prisma, Price } from '@prisma/client';
+import type { Prisma, Price } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 
@@ -31,6 +31,20 @@ export interface ChatMessageResponseDto {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export const chatMessageSelect = {
+  id: true,
+  orderId: true,
+  senderId: true,
+  text: true,
+  isRead: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.ChatMessageSelect;
+
+type SelectedChatMessage = Prisma.ChatMessageGetPayload<{
+  select: typeof chatMessageSelect;
+}>;
 
 type OrderWithItems = Prisma.OrderGetPayload<{
   include: { items: true };
@@ -179,6 +193,7 @@ export class OrdersService {
     const messages = await this.prisma.chatMessage.findMany({
       where: { orderId },
       orderBy: { createdAt: 'asc' },
+      select: chatMessageSelect,
     });
 
     return messages.map((message) => this.mapChatMessage(message));
@@ -215,6 +230,7 @@ export class OrdersService {
         NOT: { senderId: userId },
       },
       orderBy: { createdAt: 'asc' },
+      select: chatMessageSelect,
     });
 
     return messages.map((message) => this.mapChatMessage(message));
@@ -250,16 +266,8 @@ export class OrdersService {
     };
   }
 
-  private mapChatMessage(message: ChatMessage): ChatMessageResponseDto {
-    return {
-      id: message.id,
-      orderId: message.orderId,
-      senderId: message.senderId,
-      text: message.text,
-      isRead: message.isRead,
-      createdAt: message.createdAt,
-      updatedAt: message.updatedAt,
-    };
+  private mapChatMessage(message: SelectedChatMessage): ChatMessageResponseDto {
+    return { ...message };
   }
 
   private getServiceKey(
