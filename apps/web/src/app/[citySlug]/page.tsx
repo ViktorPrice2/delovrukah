@@ -3,9 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 // --- НАЧАЛО ИЗМЕНЕНИЙ В ИМПОРТАХ ---
-// Импортируем ОДНУ функцию, которая получит всё, и правильные типы
+// Импортируем ОДНУ функцию, которая получит всё
 import { getCategories } from "../lib/catalog-api";
-import type { Category } from "../types/catalog.types";
 // --- КОНЕЦ ИЗМЕНЕНИЙ В ИМПОРТАХ ---
 
 export const dynamic = "force-dynamic";

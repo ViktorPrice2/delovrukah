@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 
 // --- НАЧАЛО ИЗМЕНЕНИЙ В ИМПОРТАХ ---
 import { getServicesByCategory } from "../../lib/catalog-api";
-import type { ServiceDetail } from "../../types/catalog.types";
 // --- КОНЕЦ ИЗМЕНЕНИЙ В ИМПОРТАХ ---
 
 export const dynamic = "force-dynamic";
@@ -66,24 +65,30 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold">Услуги в категории</h2>
         <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {services.map((service) => (
-            <li key={service.id}>
-              <Link
-                href={`/${citySlug}/services/${service.slug}`}
-                className="block p-6 border rounded-lg bg-white shadow-sm transition-shadow duration-200 hover:shadow-lg h-full"
-              >
-                <h3 className="text-xl font-semibold text-slate-800">{service.name}</h3>
-                {service.description && (
-                  <p className="mt-2 text-sm text-slate-600 line-clamp-2">{service.description}</p>
-                )}
-                <div
-                  className="mt-4 inline-flex items-center font-semibold text-blue-600"
+          {services.map((service) => {
+            const servicePathSegment = service.slug || service.id;
+            return (
+              <li key={service.id}>
+                <Link
+                  href={{
+                    pathname: `/${citySlug}/services/${servicePathSegment}`,
+                    query: { id: service.id },
+                  }}
+                  className="block p-6 border rounded-lg bg-white shadow-sm transition-shadow duration-200 hover:shadow-lg h-full"
                 >
-                  Подробнее →
-                </div>
-              </Link>
-            </li>
-          ))}
+                  <h3 className="text-xl font-semibold text-slate-800">{service.name}</h3>
+                  {service.description && (
+                    <p className="mt-2 text-sm text-slate-600 line-clamp-2">{service.description}</p>
+                  )}
+                  <div
+                    className="mt-4 inline-flex items-center font-semibold text-blue-600"
+                  >
+                    Подробнее →
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </section>
     </div>

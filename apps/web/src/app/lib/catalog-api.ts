@@ -77,10 +77,24 @@ export async function getServicesByCategory(citySlug: string, categorySlug: stri
  */
 export async function getServiceDetailsBySlug(
   serviceSlug: string,
-  citySlug: string
+  citySlug: string,
+  fallbackId?: string
 ): Promise<ServiceDetail | null> {
-  // Эта функция теперь является основной для получения деталей услуги
+  const normalizedSlug = serviceSlug.trim();
+  const primary = await fetchFromApi<ServiceDetail>(
+    `/services/${encodeURIComponent(normalizedSlug)}?citySlug=${encodeURIComponent(citySlug)}`
+  );
+
+  if (primary || !fallbackId) {
+    return primary;
+  }
+
+  const normalizedFallback = fallbackId.trim();
+  if (normalizedFallback.length === 0 || normalizedFallback === normalizedSlug) {
+    return primary;
+  }
+
   return fetchFromApi<ServiceDetail>(
-    `/services/${encodeURIComponent(serviceSlug)}?citySlug=${encodeURIComponent(citySlug)}`
+    `/services/${encodeURIComponent(normalizedFallback)}?citySlug=${encodeURIComponent(citySlug)}`
   );
 }
