@@ -8,6 +8,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { GeoModule } from './geo/geo.module';
 import { ProviderModule } from './provider/provider.module';
 import { OrdersModule } from './orders/orders.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { OrdersModule } from './orders/orders.module';
     GeoModule,
     ProviderModule,
     OrdersModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
