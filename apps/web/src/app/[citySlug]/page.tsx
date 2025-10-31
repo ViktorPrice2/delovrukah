@@ -9,12 +9,16 @@ import { getCategories } from "../lib/catalog-api";
 
 export const dynamic = "force-dynamic";
 
+type CityPageParams = {
+  citySlug?: string;
+};
+
 type CityPageProps = {
-  params: { citySlug: string };
+  params: Promise<CityPageParams> | CityPageParams;
 };
 
 export async function generateMetadata({ params }: CityPageProps): Promise<Metadata> {
-  const citySlug = params?.citySlug ?? "";
+  const { citySlug = "" } = await params;
 
   // Мы не можем легко получить имя города здесь без отдельного запроса,
   // поэтому генерируем title на основе слага. Это надежнее.
@@ -30,7 +34,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
 
 export default async function CityPage({ params }: CityPageProps) {
   // --- НАЧАЛО ИЗМЕНЕНИЙ В ЛОГИКЕ ---
-  const citySlug = params?.citySlug;
+  const { citySlug } = await params;
 
   if (!citySlug) {
     console.warn("[SSR] citySlug не передан, вызываю notFound()");
