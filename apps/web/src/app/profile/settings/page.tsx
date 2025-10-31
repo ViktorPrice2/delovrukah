@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+
 import { api } from "@/lib/api";
 import { useProviderStore } from "@/app/store/provider.store";
 
@@ -132,27 +133,35 @@ export default function ProviderSettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-slate-900">Настройки профиля</h1>
-        <p className="mt-2 text-slate-600">
-          Обновите информацию о себе, чтобы клиенты могли лучше вас узнать.
+    <div className="space-y-8">
+      <header className="rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-500 p-6 text-white shadow-lg">
+        <p className="text-xs uppercase tracking-wide text-indigo-100/80">Настройки профиля</p>
+        <h1 className="mt-2 text-3xl font-semibold">Обновите информацию о себе</h1>
+        <p className="mt-3 max-w-2xl text-sm text-indigo-100/90">
+          Сформируйте привлекательную карточку исполнителя: укажите имя, расскажите об опыте и выберите город, чтобы получать больше подходящих запросов.
         </p>
-      </div>
+      </header>
 
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-        <h2 className="text-xl font-semibold text-amber-900">
-          Добро пожаловать! Пожалуйста, заполните ваш профиль, чтобы начать работу
-        </h2>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4 text-sm text-indigo-700">
+          <p className="font-semibold">Совет</p>
+          <p className="mt-2 text-indigo-600/80">Персонализированное описание с конкретными примерами работ помогает выделиться среди других исполнителей.</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 text-sm text-slate-600 shadow-sm">
+          <p className="font-semibold text-slate-900">Статус заполнения</p>
+          <p className="mt-2">{profile?.displayName ? "Имя указано" : "Добавьте отображаемое имя"}</p>
+          <p>{profile?.description ? "Описание заполнено" : "Расскажите о своем опыте"}</p>
+          <p>{profile?.cityId ? "Город выбран" : "Выберите город, где вы работаете"}</p>
+        </div>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-6 text-sm text-rose-700">
           <div>{error}</div>
           <button
             type="button"
             onClick={() => fetchProfile().catch(() => undefined)}
-            className="mt-3 inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-red-500"
+            className="mt-3 inline-flex items-center rounded-full bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-rose-500"
           >
             Повторить загрузку профиля
           </button>
@@ -160,73 +169,99 @@ export default function ProviderSettingsPage() {
       )}
 
       {successMessage && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+        <div className="rounded-3xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-emerald-700">
           {successMessage}
         </div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-slate-700" htmlFor="displayName">
-            Отображаемое имя
-          </label>
-          <input
-            id="displayName"
-            type="text"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-            placeholder="Например, Иван Иванов"
-            {...register("displayName")}
-          />
-          {errors.displayName && (
-            <p className="text-sm text-red-600">{errors.displayName.message}</p>
-          )}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <section className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <header className="space-y-1">
+              <h2 className="text-lg font-semibold text-slate-900">Основные данные</h2>
+              <p className="text-sm text-slate-500">Имя поможет клиентам узнать, кто будет выполнять работу.</p>
+            </header>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-700" htmlFor="displayName">
+                Отображаемое имя
+              </label>
+              <input
+                id="displayName"
+                type="text"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                placeholder="Например, Иван Иванов"
+                {...register("displayName")}
+              />
+              {errors.displayName && (
+                <p className="text-sm text-rose-600">{errors.displayName.message}</p>
+              )}
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <header className="space-y-1">
+              <h2 className="text-lg font-semibold text-slate-900">Город деятельности</h2>
+              <p className="text-sm text-slate-500">Выберите локацию, чтобы получить запросы поблизости.</p>
+            </header>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-700" htmlFor="cityId">
+                Город
+              </label>
+              <select
+                id="cityId"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                disabled={isCitiesLoading}
+                {...register("cityId")}
+              >
+                <option value="">Выберите город</option>
+                {isCitiesLoading && <option value="" disabled>Загрузка...</option>}
+                {cities.map((city) => (
+                  <option key={city.id} value={city.id}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+              {citiesError && (
+                <p className="text-sm text-rose-600">{citiesError}</p>
+              )}
+              {errors.cityId && <p className="text-sm text-rose-600">{errors.cityId.message}</p>}
+            </div>
+          </section>
         </div>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-slate-700" htmlFor="description">
-            Описание
-          </label>
-          <textarea
-            id="description"
-            rows={5}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-            placeholder="Расскажите о своем опыте и услугах"
-            {...register("description")}
-          />
-          {errors.description && (
-            <p className="text-sm text-red-600">{errors.description.message}</p>
-          )}
-        </div>
+        <section className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <header className="space-y-1">
+            <h2 className="text-lg font-semibold text-slate-900">Описание и опыт</h2>
+            <p className="text-sm text-slate-500">Расскажите о сильных сторонах, чтобы клиенты выбрали именно вас.</p>
+          </header>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-700" htmlFor="description">
+              Описание
+            </label>
+            <textarea
+              id="description"
+              rows={6}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              placeholder="Расскажите о своем опыте и услугах"
+              {...register("description")}
+            />
+            {errors.description && (
+              <p className="text-sm text-rose-600">{errors.description.message}</p>
+            )}
+          </div>
+        <p className="text-xs text-slate-500">
+          Подсказка: включите перечень ключевых услуг, опыт работы и форматы сотрудничества.
+        </p>
+        </section>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-slate-700" htmlFor="cityId">
-            Город
-          </label>
-          <select
-            id="cityId"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-            disabled={isCitiesLoading}
-            {...register("cityId")}
-          >
-            <option value="">Выберите город</option>
-            {isCitiesLoading && <option value="" disabled>Загрузка...</option>}
-            {cities.map((city) => (
-              <option key={city.id} value={city.id}>
-                {city.name}
-              </option>
-            ))}
-          </select>
-          {citiesError && (
-            <p className="text-sm text-red-600">{citiesError}</p>
-          )}
-          {errors.cityId && <p className="text-sm text-red-600">{errors.cityId.message}</p>}
-        </div>
-
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-xs text-slate-500">
+            Сохраните изменения, чтобы обновить карточку исполнителя и уведомить клиентов о нововведениях.
+          </span>
           <button
             type="submit"
             disabled={isUpdating || isLoading || isCitiesLoading || !isDirty}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
+            className="inline-flex items-center justify-center rounded-full bg-indigo-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
           >
             {isUpdating ? "Сохранение..." : "Сохранить изменения"}
           </button>

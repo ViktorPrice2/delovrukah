@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { FormEvent, use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -106,7 +106,7 @@ export default function OrderDetailsPage({ params }: OrderPageProps) {
         isRead: typeof raw.isRead === "boolean" ? raw.isRead : false,
       };
     },
-    [orderId]
+    [orderId],
   );
 
   useEffect(() => {
@@ -217,7 +217,7 @@ export default function OrderDetailsPage({ params }: OrderPageProps) {
         markMessagesAsReadLocally(batch);
         await refreshNotifications();
       } catch (error) {
-        console.error('Failed to mark messages as read', error);
+        console.error("Failed to mark messages as read", error);
         batch.forEach((id) => {
           processingMessageIdsRef.current.delete(id);
         });
@@ -251,85 +251,111 @@ export default function OrderDetailsPage({ params }: OrderPageProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <OrderDetailsClient orderId={orderId} />
-
-      <section className="mx-auto w-full max-w-3xl space-y-4 rounded-lg border bg-white p-6 shadow-sm">
-        <header className="space-y-1">
-          <h2 className="text-xl font-semibold">Чат по заказу</h2>
-          <p className="text-sm text-neutral-500">
-            {isConnected ? "Вы подключены к чату." : "Подключаемся к чату..."}
+    <main className="min-h-screen bg-slate-50">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
+        <header className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+            Коммуникация по заказу
+          </p>
+          <h1 className="text-3xl font-semibold text-slate-900">Детали заказа и чат</h1>
+          <p className="max-w-3xl text-sm text-slate-600">
+            Отслеживайте прогресс выполнения и поддерживайте связь с другой стороной сделки в режиме реального времени.
           </p>
         </header>
 
-        {historyError ? (
-          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{historyError}</div>
-        ) : null}
-
-        {sendError && !historyError ? (
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{sendError}</div>
-        ) : null}
-
-        <div className="flex flex-col gap-4">
-          <div className="h-80 space-y-3 overflow-y-auto rounded-lg border border-neutral-200 bg-neutral-50 p-4">
-            {historyLoading ? (
-              <p className="text-sm text-neutral-500">Загрузка истории сообщений...</p>
-            ) : messages.length === 0 ? (
-              <p className="text-sm text-neutral-500">Сообщений пока нет. Напишите первое сообщение.</p>
-            ) : (
-              messages.map((message) => {
-                const isOwnMessage =
-                  message.senderId && user?.id && message.senderId === user.id;
-                const timestampLabel = new Date(message.createdAt).toLocaleString("ru-RU");
-                const authorLabel = message.senderName ?? message.senderId;
-
-                return (
-                  <div key={message.id} className={`flex flex-col gap-1 ${isOwnMessage ? "items-end text-right" : "items-start"}`}>
-                    <div
-                      className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${
-                        isOwnMessage
-                          ? "bg-indigo-600 text-white"
-                          : "bg-white text-neutral-900 shadow"
-                      }`}
-                    >
-                      {message.content}
-                    </div>
-                    <span className="text-xs text-neutral-500">
-                      {authorLabel ? `${authorLabel} · ` : ""}
-                      {timestampLabel}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-            <div ref={messagesEndRef} />
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,360px)_1fr]">
+          <div className="lg:sticky lg:top-8">
+            <OrderDetailsClient
+              orderId={orderId}
+              className="lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto"
+            />
           </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            <textarea
-              className="min-h-[96px] w-full resize-none rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-indigo-500 focus:outline-none"
-              placeholder="Введите сообщение"
-              value={messageDraft}
-              onChange={(event) => setMessageDraft(event.target.value)}
-              disabled={!isConnected}
-            />
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xs text-neutral-500">
-                {isConnected
-                  ? "Новое сообщение доставляется мгновенно."
-                  : "Ожидание подключения к серверу..."}
-              </span>
-              <button
-                type="submit"
-                className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
-                disabled={!isConnected || messageDraft.trim().length === 0}
-              >
-                Отправить
-              </button>
+          <section className="flex flex-col gap-5 rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-lg shadow-slate-900/5">
+            <header className="space-y-1">
+              <h2 className="text-xl font-semibold text-slate-900">Чат по заказу</h2>
+              <p className="text-sm text-slate-500">
+                {isConnected ? "Вы подключены к чату." : "Подключаемся к чату..."}
+              </p>
+            </header>
+
+            {historyError ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700">
+                {historyError}
+              </div>
+            ) : null}
+
+            {sendError && !historyError ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-800">
+                {sendError}
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-4">
+              <div className="h-96 space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                {historyLoading ? (
+                  <p className="text-sm text-slate-500">Загрузка истории сообщений...</p>
+                ) : messages.length === 0 ? (
+                  <p className="text-sm text-slate-500">Сообщений пока нет. Напишите первое сообщение.</p>
+                ) : (
+                  messages.map((message) => {
+                    const isOwnMessage =
+                      message.senderId && user?.id && message.senderId === user.id;
+                    const timestampLabel = new Date(message.createdAt).toLocaleString("ru-RU");
+                    const authorLabel = message.senderName ?? message.senderId;
+
+                    return (
+                      <div
+                        key={message.id}
+                        className={`flex flex-col gap-1 ${isOwnMessage ? "items-end text-right" : "items-start"}`}
+                      >
+                        <div
+                          className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
+                            isOwnMessage
+                              ? "bg-indigo-600 text-white"
+                              : "bg-white text-slate-900"
+                          }`}
+                        >
+                          {message.content}
+                        </div>
+                        <span className="text-xs text-slate-400">
+                          {authorLabel ? `${authorLabel} · ` : ""}
+                          {timestampLabel}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                <textarea
+                  className="min-h-[120px] w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  placeholder="Введите сообщение"
+                  value={messageDraft}
+                  onChange={(event) => setMessageDraft(event.target.value)}
+                  disabled={!isConnected}
+                />
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-xs text-slate-500">
+                    {isConnected
+                      ? "Новое сообщение доставляется мгновенно."
+                      : "Ожидание подключения к серверу..."}
+                  </span>
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center rounded-full bg-indigo-600 px-6 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
+                    disabled={!isConnected || messageDraft.trim().length === 0}
+                  >
+                    Отправить
+                  </button>
+                </div>
+              </form>
             </div>
-          </form>
+          </section>
         </div>
-      </section>
-    </div>
+      </div>
+    </main>
   );
 }
