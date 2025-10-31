@@ -140,6 +140,12 @@ export default function ProviderSettingsPage() {
         </p>
       </div>
 
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <h2 className="text-xl font-semibold text-amber-900">
+          Добро пожаловать! Пожалуйста, заполните ваш профиль, чтобы начать работу
+        </h2>
+      </div>
+
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <div>{error}</div>
