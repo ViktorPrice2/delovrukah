@@ -1,6 +1,7 @@
 import { isAxiosError } from 'axios';
 import { create } from 'zustand';
 import { api } from '@/lib/api';
+import { useAuth } from './auth.store';
 
 export interface ProviderProfile {
   id?: string;
@@ -92,6 +93,11 @@ export const useProviderStore = create<ProviderStoreState>((set) => ({
       const response = await api.put<ProviderProfile>('/provider/profile', payload);
       const profile = response.data ?? { ...payload };
       set({ profile, isUpdating: false, error: undefined });
+      try {
+        await useAuth.getState().fetchUser();
+      } catch (refreshError) {
+        console.error('Failed to refresh auth user after profile update', refreshError);
+      }
     } catch (error) {
       console.error('Failed to update provider profile', error);
       set({ error: 'Не удалось обновить профиль', isUpdating: false });
