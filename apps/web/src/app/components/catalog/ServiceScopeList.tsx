@@ -1,10 +1,11 @@
 import type { FC, ReactNode } from "react";
 
 type ServiceScopeListProps = {
-  title: string;
+  title?: string;
   items?: string[] | null;
   iconVariant?: "positive" | "negative" | "info";
   className?: string;
+  showTitle?: boolean;
 };
 
 const ICON_VARIANTS: Record<NonNullable<ServiceScopeListProps["iconVariant"]>, {
@@ -109,6 +110,7 @@ export const ServiceScopeList: FC<ServiceScopeListProps> = ({
   items,
   iconVariant = "positive",
   className,
+  showTitle = true,
 }) => {
   if (!items || items.length === 0) {
     return null;
@@ -124,9 +126,11 @@ export const ServiceScopeList: FC<ServiceScopeListProps> = ({
 
   const { icon, iconWrapperClass } = ICON_VARIANTS[iconVariant];
 
+  const shouldShowTitle = showTitle && Boolean(title);
+
   return (
     <div className={joinClassNames("space-y-3", className)}>
-      <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+      {shouldShowTitle ? <h3 className="text-lg font-semibold text-slate-900">{title}</h3> : null}
       <ul className="space-y-2">
         {preparedItems.map((item, index) => (
           <li
