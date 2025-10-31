@@ -25,6 +25,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "socket.io-client": [
+        "./src/stubs/socket-io-client"
       ]
     }
   },
