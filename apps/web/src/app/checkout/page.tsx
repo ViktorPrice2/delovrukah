@@ -9,9 +9,9 @@ import { useAuth } from '@/app/store/auth.store';
 import { useCartStore } from '@/app/store/cart.store';
 
 interface CreateOrderPayload {
-  items: Array<{
-    serviceId: string;
+  services: Array<{
     providerId: string;
+    serviceTemplateVersionId: string;
     quantity: number;
   }>;
 }
@@ -80,15 +80,27 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
     setSubmitError(null);
 
-    const payload: CreateOrderPayload = {
-      items: items.map((item) => ({
-        serviceId: item.service.id,
-        providerId: item.provider.id,
-        quantity: item.quantity,
-      })),
-    };
-
     try {
+      const servicesPayload = items.map((item) => {
+        const serviceTemplateVersionId = item.service.latestVersion?.id;
+
+        if (!serviceTemplateVersionId) {
+          throw new Error(
+            `Не удалось определить активную версию услуги "${item.service.name}".`,
+          );
+        }
+
+        return {
+          providerId: item.provider.id,
+          serviceTemplateVersionId,
+          quantity: item.quantity,
+        };
+      });
+
+      const payload: CreateOrderPayload = {
+        services: servicesPayload,
+      };
+
       const response = await api.post<CreateOrderResponse>('/orders', payload);
       const orderId = response.data?.id ?? response.data?.order?.id;
 
