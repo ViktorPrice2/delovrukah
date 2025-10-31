@@ -50,6 +50,7 @@ model ProviderProfile {
   homeLocation     Unsupported("point")?
   prices           Price[]
   keptServices     ServiceTemplate[] @relation("KeptServices") // <-- Связь для Хранителя
+  orderItems       OrderItem[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
@@ -62,6 +63,7 @@ model CustomerProfile {
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName          String
   preferredLanguage String?  @default("ru")
+  orders            Order[]
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -112,6 +114,7 @@ model ServiceTemplateVersion {
   isActive          Boolean         @default(true)
   serviceTemplate   ServiceTemplate @relation(fields: [serviceTemplateId], references: [id], onDelete: Cascade)
   prices            Price[]
+  orderItems        OrderItem[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -130,5 +133,34 @@ model Price {
   updatedAt                DateTime               @updatedAt
 
   @@unique([providerProfileId, serviceTemplateVersionId])
+  @@index([serviceTemplateVersionId])
+}
+
+model Order {
+  id                String          @id @default(cuid())
+  customerProfileId String
+  customerProfile   CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  items             OrderItem[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([customerProfileId])
+}
+
+model OrderItem {
+  id                       String                 @id @default(cuid())
+  orderId                  String
+  order                    Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  providerProfileId        String
+  providerProfile          ProviderProfile        @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+  serviceTemplateVersionId String
+  serviceTemplateVersion   ServiceTemplateVersion @relation(fields: [serviceTemplateVersionId], references: [id], onDelete: Cascade)
+  price                    Decimal                @db.Decimal(10, 2)
+  quantity                 Int
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+
+  @@index([orderId])
+  @@index([providerProfileId])
   @@index([serviceTemplateVersionId])
 }

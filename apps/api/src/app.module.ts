@@ -7,6 +7,7 @@ import { CatalogModule } from './catalog/catalog.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { GeoModule } from './geo/geo.module';
 import { ProviderModule } from './provider/provider.module';
+import { OrdersModule } from './orders/orders.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ProviderModule } from './provider/provider.module';
     CatalogModule,
     GeoModule,
     ProviderModule,
+    OrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
