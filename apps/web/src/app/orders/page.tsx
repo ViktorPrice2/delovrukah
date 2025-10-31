@@ -36,7 +36,7 @@ export default function OrdersPage() {
       return;
     }
 
-    if (user.role !== "CUSTOMER") {
+    if (user.role !== "CUSTOMER" && user.role !== "PROVIDER") {
       router.replace("/");
       return;
     }
