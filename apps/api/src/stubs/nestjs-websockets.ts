@@ -5,8 +5,8 @@ export interface GatewayLifecycle {
   handleDisconnect?(client: unknown): void | Promise<void>;
 }
 
-export interface OnGatewayConnection extends GatewayLifecycle {}
-export interface OnGatewayDisconnect extends GatewayLifecycle {}
+export type OnGatewayConnection = GatewayLifecycle;
+export type OnGatewayDisconnect = GatewayLifecycle;
 
 export class WsException extends Error {
   constructor(message: string) {
@@ -15,44 +15,56 @@ export class WsException extends Error {
   }
 }
 
-type ClassDecoratorFactory<T extends unknown[]> = (...args: T) => ClassDecorator;
-type MethodDecoratorFactory<T extends unknown[]> = (...args: T) => MethodDecorator;
-type ParameterDecoratorFactory<T extends unknown[]> = (...args: T) => ParameterDecorator;
-type PropertyDecoratorFactory<T extends unknown[]> = (...args: T) => PropertyDecorator;
+type ClassDecoratorFactory<T extends unknown[]> = (
+  ...args: T
+) => ClassDecorator;
+type MethodDecoratorFactory<T extends unknown[]> = (
+  ...args: T
+) => MethodDecorator;
+type ParameterDecoratorFactory<T extends unknown[]> = (
+  ...args: T
+) => ParameterDecorator;
+type PropertyDecoratorFactory<T extends unknown[]> = (
+  ...args: T
+) => PropertyDecorator;
 
-export const WebSocketGateway: ClassDecoratorFactory<[unknown?]> = () => () => undefined;
+export const WebSocketGateway: ClassDecoratorFactory<[unknown?]> = () => () =>
+  undefined;
 
-export const SubscribeMessage: MethodDecoratorFactory<[string?]> = () => () => undefined;
+export const SubscribeMessage: MethodDecoratorFactory<[string?]> = () => () =>
+  undefined;
 
-export const ConnectedSocket: ParameterDecoratorFactory<[]> = () => () => undefined;
+export const ConnectedSocket: ParameterDecoratorFactory<[]> = () => () =>
+  undefined;
 
 export const MessageBody: ParameterDecoratorFactory<[]> = () => () => undefined;
 
 const serverPropertyKey = Symbol('websocketServer');
 
-export const WebSocketServer: PropertyDecoratorFactory<[]> = () => (target, propertyKey) => {
-  Object.defineProperty(target, propertyKey, {
-    configurable: true,
-    get() {
-      if (!(serverPropertyKey in this)) {
+export const WebSocketServer: PropertyDecoratorFactory<[]> =
+  () => (target, propertyKey) => {
+    Object.defineProperty(target, propertyKey, {
+      configurable: true,
+      get() {
+        if (!(serverPropertyKey in this)) {
+          Object.defineProperty(this, serverPropertyKey, {
+            value: new Server(),
+            writable: true,
+            configurable: false,
+          });
+        }
+
+        const storage = this as Record<PropertyKey, unknown>;
+        return storage[serverPropertyKey];
+      },
+      set(value: unknown) {
         Object.defineProperty(this, serverPropertyKey, {
-          value: new Server(),
+          value,
           writable: true,
           configurable: false,
         });
-      }
-
-      const storage = this as Record<PropertyKey, unknown>;
-      return storage[serverPropertyKey];
-    },
-    set(value: unknown) {
-      Object.defineProperty(this, serverPropertyKey, {
-        value,
-        writable: true,
-        configurable: false,
-      });
-    },
-  });
-};
+      },
+    });
+  };
 
 export type WebSocketServerType = InstanceType<typeof Server>;

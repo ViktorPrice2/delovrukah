@@ -13,7 +13,7 @@ type CategoryPageProps = {
 };
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  const { citySlug, categorySlug } = await params;
+  const { citySlug, categorySlug } = params;
   
   // Формируем заголовки на основе слагов - это быстро и надежно
   const cityName = citySlug.charAt(0).toUpperCase() + citySlug.slice(1);
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   // --- НАЧАЛО ИЗМЕНЕНИЙ В ЛОГИКЕ ---
-  const { citySlug, categorySlug } = await params;
+  const { citySlug, categorySlug } = params;
 
   console.log(`[SSR] Запрашиваю услуги: category=${categorySlug}, city=${citySlug}`);
   const services = await getServicesByCategory(citySlug, categorySlug);

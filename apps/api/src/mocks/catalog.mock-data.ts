@@ -17,7 +17,8 @@ const ELECTRICAL_CATEGORY: CategoryDto = {
   id: 'category-electrical',
   name: 'Электромонтажные работы',
   slug: 'elektrika',
-  description: 'Комплексные услуги по диагностике и обслуживанию электрических систем в городе Новосибирск.',
+  description:
+    'Комплексные услуги по диагностике и обслуживанию электрических систем в городе Новосибирск.',
 };
 
 const ELECTRICAL_SERVICE_VERSION: ServiceVersionDto = {
@@ -76,7 +77,9 @@ function cloneCategory(category: CategoryDto): CategoryDto {
   return { ...category };
 }
 
-function cloneVersion(version: ServiceVersionDto | null): ServiceVersionDto | null {
+function cloneVersion(
+  version: ServiceVersionDto | null,
+): ServiceVersionDto | null {
   if (!version) {
     return null;
   }
@@ -117,7 +120,10 @@ function filterProvidersByCity(
     .map(cloneProvider);
 }
 
-function cloneServiceForCity(service: ServiceDetailDto, citySlug: string): ServiceDetailDto {
+function cloneServiceForCity(
+  service: ServiceDetailDto,
+  citySlug: string,
+): ServiceDetailDto {
   const cloned = cloneService(service);
   cloned.providers = filterProvidersByCity(service.providers, citySlug);
   return cloned;
@@ -147,22 +153,32 @@ export function findMockCategoryById(categoryId: string): CategoryDto | null {
   return category ? cloneCategory(category) : null;
 }
 
-export function getMockServiceSummariesByCategoryId(categoryId: string): ServiceSummaryDto[] {
-  return MOCK_SERVICES.filter((service) => service.categoryId === categoryId).map((service) =>
-    createSummary(cloneService(service)),
-  );
+export function getMockServiceSummariesByCategoryId(
+  categoryId: string,
+): ServiceSummaryDto[] {
+  return MOCK_SERVICES.filter(
+    (service) => service.categoryId === categoryId,
+  ).map((service) => createSummary(cloneService(service)));
 }
 
-export function getMockServicesByCategorySlug(categorySlug: string, citySlug: string): ServiceDetailDto[] {
-  return MOCK_SERVICES
-    .filter((service) => service.category.slug === categorySlug)
-    .map((service) => cloneServiceForCity(service, citySlug));
+export function getMockServicesByCategorySlug(
+  categorySlug: string,
+  citySlug: string,
+): ServiceDetailDto[] {
+  return MOCK_SERVICES.filter(
+    (service) => service.category.slug === categorySlug,
+  ).map((service) => cloneServiceForCity(service, citySlug));
 }
 
-export function findMockServiceBySlugOrId(slugOrId: string, citySlug: string): ServiceDetailDto | null {
+export function findMockServiceBySlugOrId(
+  slugOrId: string,
+  citySlug: string,
+): ServiceDetailDto | null {
   const normalized = slugOrId.trim().toLowerCase();
   const service = MOCK_SERVICES.find(
-    (item) => item.slug.toLowerCase() === normalized || item.id.toLowerCase() === normalized,
+    (item) =>
+      item.slug.toLowerCase() === normalized ||
+      item.id.toLowerCase() === normalized,
   );
 
   if (!service) {

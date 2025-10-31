@@ -9,7 +9,10 @@ function sanitizeValue(value: unknown): unknown {
     try {
       return JSON.parse(JSON.stringify(value));
     } catch {
-      return String(value);
+      const ctorName =
+        (value as { constructor?: { name?: string } }).constructor?.name ??
+        'value';
+      return `[Non-serializable ${ctorName}]`;
     }
   }
 

@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable, Logger } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
@@ -33,7 +38,9 @@ function isHandshakeData(value: unknown): value is HandshakeData {
   );
 }
 
-export function isAuthenticatedSocket(value: unknown): value is AuthenticatedSocket {
+export function isAuthenticatedSocket(
+  value: unknown,
+): value is AuthenticatedSocket {
   if (!value || typeof value !== 'object') {
     return false;
   }
@@ -49,7 +56,9 @@ export function isAuthenticatedSocket(value: unknown): value is AuthenticatedSoc
   );
 }
 
-function assertAuthenticatedSocket(client: unknown): asserts client is AuthenticatedSocket {
+function assertAuthenticatedSocket(
+  client: unknown,
+): asserts client is AuthenticatedSocket {
   if (!isAuthenticatedSocket(client)) {
     throw new WsException('Invalid WebSocket client');
   }
