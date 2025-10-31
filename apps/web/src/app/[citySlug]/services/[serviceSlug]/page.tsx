@@ -188,6 +188,7 @@ export default async function ServicePage({ params, searchParams }: ServicePageP
             items={whatsIncluded}
             iconVariant="positive"
             className="space-y-4"
+            showTitle={false}
           />
         ) : (
           <DetailPlaceholder message="Подробный перечень работ появится, как только мы получим информацию от исполнителя." />
@@ -205,6 +206,7 @@ export default async function ServicePage({ params, searchParams }: ServicePageP
             items={whatsNotIncluded}
             iconVariant="negative"
             className="space-y-4"
+            showTitle={false}
           />
         ) : (
           <DetailPlaceholder message="Дополнительные работы обсуждаются индивидуально с выбранным мастером." />
@@ -222,6 +224,7 @@ export default async function ServicePage({ params, searchParams }: ServicePageP
             items={requiredTools}
             iconVariant="info"
             className="space-y-4"
+            showTitle={false}
           />
         ) : (
           <DetailPlaceholder message="Исполнитель предоставит перечень инструментов после подтверждения заказа." />
@@ -238,6 +241,7 @@ export default async function ServicePage({ params, searchParams }: ServicePageP
             items={customerRequirements}
             iconVariant="info"
             className="space-y-4"
+            showTitle={false}
           />
         ) : (
           <DetailPlaceholder message="Мы уточним требования к подготовке помещения и доступам после обработки заявки." />

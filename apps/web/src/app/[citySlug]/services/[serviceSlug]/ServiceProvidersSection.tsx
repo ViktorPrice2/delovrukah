@@ -8,6 +8,21 @@ import { AddToCartButton } from './AddToCartButton';
 
 type ViewMode = 'list' | 'map';
 
+type PriorityKey = 'speed' | 'quality' | 'price';
+
+type PriorityTag = {
+  key: PriorityKey;
+  label: string;
+};
+
+const PRIORITY_TAGS: PriorityTag[] = [
+  { key: 'speed', label: 'Скорость' },
+  { key: 'quality', label: 'Качество' },
+  { key: 'price', label: 'Цена' },
+];
+
+const ITEMS_PER_PAGE = 5;
+
 type ProviderCardProps = {
   provider: Provider;
   service: ServiceDetail;
@@ -44,6 +59,19 @@ function getRating(id: string): { rating: number; reviews: number } {
   const rating = 4 + ((hash % 10) / 10 + 0.1);
   const reviews = 25 + (hash % 75);
   return { rating: Math.min(4.9, parseFloat(rating.toFixed(1))), reviews };
+}
+
+function getPriorityMetrics(provider: Provider): Record<PriorityKey, number> {
+  const hash = computeHash(provider.id);
+  const speed = 60 + (hash % 40);
+  const quality = getRating(provider.id).rating * 10;
+  const price = provider.price;
+
+  return {
+    speed,
+    quality,
+    price,
+  };
 }
 
 function getBadges(id: string): string[] {
@@ -179,7 +207,74 @@ type ProvidersSectionProps = {
 
 export function ServiceProvidersSection({ providers, service, cityName }: ProvidersSectionProps) {
   const [view, setView] = useState<ViewMode>('list');
+  const [selectedPriorities, setSelectedPriorities] = useState<PriorityKey[]>(['quality', 'price']);
+  const [currentPage, setCurrentPage] = useState(1);
   const hasProviders = providers.length > 0;
+
+  const priorityTags = PRIORITY_TAGS;
+
+  const providersWithMetrics = useMemo(
+    () =>
+      providers.map((provider) => ({
+        provider,
+        metrics: getPriorityMetrics(provider),
+      })),
+    [providers],
+  );
+
+  const sortedProviders = useMemo(() => {
+    if (selectedPriorities.length === 0) {
+      return providers;
+    }
+
+    return [...providersWithMetrics]
+      .sort((a, b) => {
+        for (const priority of selectedPriorities) {
+          const valueA = a.metrics[priority];
+          const valueB = b.metrics[priority];
+
+          if (valueA !== valueB) {
+            if (priority === 'price') {
+              return valueA - valueB;
+            }
+            return valueB - valueA;
+          }
+        }
+        return a.provider.displayName.localeCompare(b.provider.displayName);
+      })
+      .map((item) => item.provider);
+  }, [providers, providersWithMetrics, selectedPriorities]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedProviders.length / ITEMS_PER_PAGE));
+  const clampedPage = Math.min(currentPage, totalPages);
+  const pageOffset = (clampedPage - 1) * ITEMS_PER_PAGE;
+  const paginatedProviders = sortedProviders.slice(pageOffset, pageOffset + ITEMS_PER_PAGE);
+  const startIndex = sortedProviders.length === 0 ? 0 : pageOffset + 1;
+  const endIndex = pageOffset + paginatedProviders.length;
+
+  const handlePriorityToggle = (priority: PriorityKey) => {
+    setSelectedPriorities((prev) => {
+      if (prev.includes(priority)) {
+        return prev.filter((item) => item !== priority);
+      }
+
+      if (prev.length < 2) {
+        return [...prev, priority];
+      }
+
+      return [priority, prev[0]];
+    });
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (direction: 'next' | 'prev') => {
+    setCurrentPage((prev) => {
+      if (direction === 'next') {
+        return Math.min(prev + 1, totalPages);
+      }
+      return Math.max(prev - 1, 1);
+    });
+  };
 
   return (
     <section id="providers" className="space-y-4">
@@ -207,9 +302,73 @@ export function ServiceProvidersSection({ providers, service, cityName }: Provid
       </div>
 
       {hasProviders ? (
+        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">Ваш приоритет</p>
+              <p className="text-sm text-slate-500">Выберите до двух, чтобы отсортировать список мастеров.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {priorityTags.map((tag) => {
+                const isActive = selectedPriorities.includes(tag.key);
+                return (
+                  <button
+                    key={tag.key}
+                    type="button"
+                    onClick={() => handlePriorityToggle(tag.key)}
+                    aria-pressed={isActive}
+                    className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition ${
+                      isActive
+                        ? 'border-emerald-500 bg-emerald-500 text-white shadow'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-600'
+                    }`}
+                  >
+                    {isActive ? (
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-xs font-semibold">
+                        {selectedPriorities.indexOf(tag.key) + 1}
+                      </span>
+                    ) : null}
+                    {tag.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
+            <span>
+              Мастера {startIndex}–{endIndex} из {sortedProviders.length}
+            </span>
+            {totalPages > 1 ? (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handlePageChange('prev')}
+                  className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={clampedPage === 1}
+                >
+                  Назад
+                </button>
+                <span className="min-w-[90px] text-center">
+                  Стр. {clampedPage} из {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handlePageChange('next')}
+                  className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={clampedPage === totalPages}
+                >
+                  Вперёд
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {hasProviders ? (
         view === 'list' ? (
           <ul className="space-y-4">
-            {providers.map((provider) => (
+            {paginatedProviders.map((provider) => (
               <ProviderCard key={provider.id} provider={provider} service={service} />
             ))}
           </ul>
@@ -217,7 +376,7 @@ export function ServiceProvidersSection({ providers, service, cityName }: Provid
           <div className="relative h-96 overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-emerald-50 via-white to-sky-50 shadow-inner">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.12),_transparent_55%)]" />
             <div className="absolute inset-6 rounded-3xl border border-dashed border-emerald-200" />
-            {providers.map((provider) => (
+            {sortedProviders.map((provider) => (
               <Marker key={provider.id} provider={provider} />
             ))}
             <div className="absolute bottom-4 right-4 rounded-full bg-white/90 px-4 py-2 text-xs font-medium text-slate-600 shadow">
