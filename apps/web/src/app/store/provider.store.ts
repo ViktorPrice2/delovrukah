@@ -20,9 +20,27 @@ interface ProviderStoreState {
   isLoading: boolean;
   isUpdating: boolean;
   error?: string;
+  priceCatalog: ProviderPriceCategory[];
+  isPriceCatalogLoading: boolean;
+  priceCatalogError?: string;
   fetchProfile: () => Promise<void>;
   updateProfile: (payload: UpdateProfilePayload) => Promise<void>;
   resetError: () => void;
+  fetchPriceCatalog: () => Promise<void>;
+}
+
+export interface ProviderPriceService {
+  id: string;
+  name: string;
+  providerPrice?: number | null;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+}
+
+export interface ProviderPriceCategory {
+  id: string;
+  name: string;
+  services: ProviderPriceService[];
 }
 
 export const useProviderStore = create<ProviderStoreState>((set) => ({
@@ -30,6 +48,9 @@ export const useProviderStore = create<ProviderStoreState>((set) => ({
   isLoading: false,
   isUpdating: false,
   error: undefined,
+  priceCatalog: [],
+  isPriceCatalogLoading: false,
+  priceCatalogError: undefined,
   fetchProfile: async () => {
     set({ isLoading: true, error: undefined });
     try {
@@ -53,4 +74,19 @@ export const useProviderStore = create<ProviderStoreState>((set) => ({
     }
   },
   resetError: () => set({ error: undefined }),
+  fetchPriceCatalog: async () => {
+    set({ isPriceCatalogLoading: true, priceCatalogError: undefined });
+    try {
+      const response = await api.get<ProviderPriceCategory[]>('/provider/prices/catalog');
+      const priceCatalog = response.data ?? [];
+      set({ priceCatalog, isPriceCatalogLoading: false, priceCatalogError: undefined });
+    } catch (error) {
+      console.error('Failed to load provider price catalog', error);
+      set({
+        priceCatalogError: 'Не удалось загрузить каталог цен',
+        isPriceCatalogLoading: false,
+      });
+    }
+  },
 }));
+
