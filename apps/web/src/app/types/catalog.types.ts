@@ -33,12 +33,12 @@ export interface ServiceVersion {
   id: string;
   versionNumber: number;
   title: string;
-  description: string;
-  whatsIncluded: unknown;
-  whatsNotIncluded: unknown;
-  unitOfMeasure: string;
-  requiredTools: unknown;
-  customerRequirements: unknown;
+  description: string | null;
+  whatsIncluded: string[] | null;
+  whatsNotIncluded: string[] | null;
+  unitOfMeasure: string | null;
+  requiredTools: string[] | null;
+  customerRequirements: string[] | null;
   isActive: boolean;
   createdAt: string; // Даты приходят как строки в JSON
   updatedAt: string;
