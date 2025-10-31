@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import type { CityDto } from '../../geo/dto/city.dto';
 import type { CategoryDto } from './category.dto';
 
@@ -5,7 +6,12 @@ export class ServiceVersionDto {
   id: string;
   versionNumber: number;
   title: string;
-  description: string | null;
+  description: string;
+  whatsIncluded: Prisma.JsonValue;
+  whatsNotIncluded: Prisma.JsonValue;
+  unitOfMeasure: string;
+  requiredTools: Prisma.JsonValue;
+  customerRequirements: Prisma.JsonValue;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -18,6 +24,7 @@ export class ServiceSummaryDto {
   description: string | null;
   latestVersion: ServiceVersionDto | null;
   slug: string;
+  medianPrice: number | null;
 }
 
 export class ServiceProviderDto {

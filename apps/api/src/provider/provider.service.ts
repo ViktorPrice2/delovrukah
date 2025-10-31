@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CatalogService } from '../catalog/catalog.service';
 import { ProviderCatalogCategoryDto } from './dto/provider-catalog.dto';
 import { ProviderPriceDto } from './dto/provider-price.dto';
 import { ProviderProfileDto } from './dto/provider-profile.dto';
@@ -9,7 +10,10 @@ import { UpdateProviderPricesDto } from './dto/update-prices.dto';
 
 @Injectable()
 export class ProviderService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly catalogService: CatalogService,
+  ) {}
 
   async getProviderPrices(userId: string): Promise<ProviderPriceDto[]> {
     const providerProfile = await this.prisma.providerProfile.findUnique({
@@ -177,6 +181,10 @@ export class ProviderService {
       throw new NotFoundException('Provider profile not found');
     }
 
+    const serviceTemplateVersionIds = Array.from(
+      new Set(dto.prices.map((price) => price.serviceTemplateVersionId)),
+    );
+
     const updates = await this.prisma.$transaction(async (tx) => {
       const results: ProviderPriceDto[] = [];
 
@@ -221,6 +229,23 @@ export class ProviderService {
 
       return results;
     });
+
+    if (serviceTemplateVersionIds.length > 0) {
+      const relatedServiceTemplates = await this.prisma.serviceTemplateVersion.findMany({
+        where: { id: { in: serviceTemplateVersionIds } },
+        select: { serviceTemplateId: true },
+      });
+
+      const uniqueTemplateIds = new Set(
+        relatedServiceTemplates.map((version) => version.serviceTemplateId),
+      );
+
+      await Promise.all(
+        Array.from(uniqueTemplateIds).map((serviceTemplateId) =>
+          this.catalogService.updateMedianPrice(serviceTemplateId),
+        ),
+      );
+    }
 
     return updates;
   }

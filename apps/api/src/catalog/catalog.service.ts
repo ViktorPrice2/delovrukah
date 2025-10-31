@@ -180,6 +180,10 @@ export class CatalogService {
           where: {
             serviceTemplateVersionId: latestVersion.id,
             providerProfile: { cityId: city.id },
+            OR: [
+              { expiresAt: null },
+              { expiresAt: { gt: new Date() } },
+            ],
           },
           include: { providerProfile: { include: { city: true } } },
           orderBy: { price: 'asc' },
@@ -239,6 +243,7 @@ export class CatalogService {
       name: service.name,
       description: service.description,
       latestVersion: this.mapVersion(latestVersion),
+      medianPrice: service.medianPrice?.toNumber() ?? null,
     };
   }
 
@@ -254,10 +259,56 @@ export class CatalogService {
       versionNumber: version.versionNumber,
       title: version.title,
       description: version.description,
+      whatsIncluded: version.whatsIncluded,
+      whatsNotIncluded: version.whatsNotIncluded,
+      unitOfMeasure: version.unitOfMeasure,
+      requiredTools: version.requiredTools,
+      customerRequirements: version.customerRequirements,
       isActive: version.isActive,
       createdAt: version.createdAt,
       updatedAt: version.updatedAt,
     };
+  }
+
+  async updateMedianPrice(serviceTemplateId: string): Promise<void> {
+    if (!this.prisma.isDatabaseAvailable) {
+      return;
+    }
+
+    const activePrices = await this.prisma.price.findMany({
+      where: {
+        serviceTemplateVersion: {
+          serviceTemplateId,
+          isActive: true,
+        },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      select: { price: true },
+      orderBy: { price: 'asc' },
+    });
+
+    if (activePrices.length === 0) {
+      await this.prisma.serviceTemplate.update({
+        where: { id: serviceTemplateId },
+        data: { medianPrice: null },
+      });
+      return;
+    }
+
+    const sorted = activePrices.map((p) => p.price.toNumber());
+    const middle = Math.floor(sorted.length / 2);
+
+    let median: number;
+    if (sorted.length % 2 === 0) {
+      median = (sorted[middle - 1] + sorted[middle]) / 2;
+    } else {
+      median = sorted[middle];
+    }
+
+    await this.prisma.serviceTemplate.update({
+      where: { id: serviceTemplateId },
+      data: { medianPrice: new Prisma.Decimal(median) },
+    });
   }
 
   private mapServiceProvider(
