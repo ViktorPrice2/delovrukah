@@ -1,0 +1,12 @@
+# Shared ignores for generated artifacts and build outputs
+node_modules/
+dist/
+build/
+out/
+.next/
+coverage/
+**/__generated__/**
+**/generated/**
+**/__mocks__/**
+**/mocks/**
+*.log

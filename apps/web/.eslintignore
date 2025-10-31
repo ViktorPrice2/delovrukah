@@ -1,0 +1,10 @@
+# Ignore Next.js build output and generated sources
+node_modules/
+.next/
+out/
+build/
+coverage/
+**/__generated__/**
+**/generated/**
+**/__mocks__/**
+**/mocks/**

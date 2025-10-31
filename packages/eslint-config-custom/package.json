@@ -1,0 +1,8 @@
+{
+  "name": "@delovrukah/eslint-config-custom",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.mjs"
+  }
+}

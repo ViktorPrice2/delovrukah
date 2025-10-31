@@ -1,0 +1,8 @@
+# Ignore build output and generated sources
+node_modules/
+dist/
+coverage/
+**/__generated__/**
+**/generated/**
+**/__mocks__/**
+**/mocks/**
