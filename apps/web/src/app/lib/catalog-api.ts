@@ -42,7 +42,12 @@ async function fetchFromApi<T>(path: string): Promise<T | null> {
 
 export async function getCities(): Promise<City[]> {
   const cities = await fetchFromApi<City[]>("/cities");
-  return cities ?? []; // Возвращаем пустой массив, если API вернул null
+
+  if (!cities) {
+    throw new Error("Cities data is unavailable");
+  }
+
+  return cities;
 }
 
 export async function getCategories(citySlug: string): Promise<Category[]> {
