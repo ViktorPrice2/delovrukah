@@ -685,7 +685,7 @@ async function setProviderHomeLocation(
 ) {
   await prisma.$executeRaw`
     UPDATE "ProviderProfile"
-    SET "homeLocation" = ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::point
+    SET "homeLocation" = ST_SetSRID(ST_MakePoint(${longitude}::double precision, ${latitude}::double precision), 4326)::point
     WHERE "id" = ${providerProfileId}
   `;
 }
