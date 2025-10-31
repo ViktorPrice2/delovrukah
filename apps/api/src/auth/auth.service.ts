@@ -13,6 +13,17 @@ import { SigninDto } from './dto/signin.dto';
 import { SignupDto } from './dto/signup.dto';
 import { resolveJwtSecret } from './jwt-secret.util';
 
+export interface OrderUnreadSummary {
+  orderId: string;
+  orderNumber: string;
+  unreadInOrder: number;
+}
+
+export interface NotificationsSummary {
+  totalUnreadCount: number;
+  ordersWithUnread: OrderUnreadSummary[];
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -79,7 +90,7 @@ export class AuthService {
     return this.signToken(user.id, user.email, user.role);
   }
 
-  async getUnreadMessagesCount(userId: string): Promise<number> {
+  async getUnreadNotifications(userId: string): Promise<NotificationsSummary> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true },
@@ -89,7 +100,8 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
-    const unreadCount = await this.prisma.chatMessage.count({
+    const unreadByOrder = await this.prisma.chatMessage.groupBy({
+      by: ['orderId'],
       where: {
         isRead: false,
         senderId: { not: userId },
@@ -100,9 +112,42 @@ export class AuthService {
           ],
         },
       },
+      _count: { orderId: true },
+      _max: { createdAt: true },
     });
 
-    return unreadCount;
+    if (unreadByOrder.length === 0) {
+      return { totalUnreadCount: 0, ordersWithUnread: [] };
+    }
+
+    const orderIds = unreadByOrder.map((group) => group.orderId);
+
+    const relatedOrders = await this.prisma.order.findMany({
+      where: { id: { in: orderIds } },
+      select: { id: true },
+    });
+
+    const orderNumberMap = new Map<string, string>();
+    relatedOrders.forEach((order) => {
+      orderNumberMap.set(order.id, order.id);
+    });
+
+    const totalUnreadCount = unreadByOrder.reduce(
+      (acc, group) => acc + group._count.orderId,
+      0,
+    );
+
+    const ordersWithUnread = unreadByOrder
+      .map((group) => ({
+        orderId: group.orderId,
+        orderNumber: orderNumberMap.get(group.orderId) ?? group.orderId,
+        unreadInOrder: group._count.orderId,
+        latestMessageAt: group._max.createdAt ?? new Date(0),
+      }))
+      .sort((a, b) => b.latestMessageAt.getTime() - a.latestMessageAt.getTime())
+      .map(({ latestMessageAt: _latestMessageAt, ...rest }) => rest);
+
+    return { totalUnreadCount, ordersWithUnread };
   }
 
   private async signToken(

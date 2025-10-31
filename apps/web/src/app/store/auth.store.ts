@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { api } from '@/lib/api';
+import { useNotificationsStore } from './notifications.store';
 
 // 1. Определяем типы
 interface AuthUser {
@@ -19,13 +20,9 @@ interface AuthState {
   user: AuthUser | undefined; // Может быть объектом или undefined
   token: string | undefined;
   isLoading: boolean; // <--- ДОБАВЛЯЕМ НОВОЕ ПОЛЕ В ИНТЕРФЕЙС
-  unreadCount: number;
   login: (data: { user: AuthUser; token: string }) => void;
   logout: () => void;
   fetchUser: () => Promise<void>;
-  fetchUnreadCount: () => Promise<void>;
-  incrementUnreadCount: (delta?: number) => void;
-  decrementUnreadCount: (delta?: number) => void;
   rehydrate: () => void;
 }
 
@@ -36,20 +33,22 @@ export const useAuth = create<AuthState>()(
       user: undefined,
       token: undefined,
       isLoading: true, // <--- НАЧАЛЬНОЕ СОСТОЯНИЕ - ЗАГРУЗКА
-      unreadCount: 0,
-
       login: (data) => {
         set({ user: data.user, token: data.token, isLoading: false });
-        void get().fetchUnreadCount();
+        void useNotificationsStore.getState().fetchNotifications();
       },
 
-      logout: () => set({ user: undefined, token: undefined, unreadCount: 0 }),
+      logout: () => {
+        useNotificationsStore.getState().clear();
+        set({ user: undefined, token: undefined });
+      },
 
       fetchUser: async () => {
         const token = get().token;
 
         if (!token) {
-          set({ isLoading: false, user: undefined, unreadCount: 0 }); // <-- ИСПРАВЛЕНО: undefined вместо null
+          useNotificationsStore.getState().clear();
+          set({ isLoading: false, user: undefined }); // <-- ИСПРАВЛЕНО: undefined вместо null
           return;
         }
 
@@ -62,7 +61,7 @@ export const useAuth = create<AuthState>()(
               user: { id: user.sub, email: user.email, role: user.role },
               isLoading: false,
             });
-            await get().fetchUnreadCount();
+            await useNotificationsStore.getState().fetchNotifications();
           } else {
             get().logout();
             set({ isLoading: false });
@@ -73,33 +72,6 @@ export const useAuth = create<AuthState>()(
           set({ isLoading: false });
         }
       },
-
-      fetchUnreadCount: async () => {
-        const token = get().token;
-
-        if (!token) {
-          set({ unreadCount: 0 });
-          return;
-        }
-
-        try {
-          const response = await api.get<{ unreadCount: number }>(
-            '/auth/me/notifications/unread-count',
-          );
-          const unreadCount = Number(response.data?.unreadCount ?? 0);
-          set({ unreadCount: unreadCount >= 0 ? unreadCount : 0 });
-        } catch (error) {
-          console.error('Failed to fetch unread notifications count:', error);
-        }
-      },
-
-      incrementUnreadCount: (delta = 1) =>
-        set((state) => ({ unreadCount: state.unreadCount + Math.max(delta, 0) })),
-
-      decrementUnreadCount: (delta = 1) =>
-        set((state) => ({
-          unreadCount: Math.max(0, state.unreadCount - Math.max(delta, 0)),
-        })),
 
       rehydrate: () => {
         // Эта функция будет вызвана один раз при старте приложения.

@@ -6,6 +6,7 @@ import { io } from "socket.io-client";
 
 import { getApiBaseUrl } from "@/lib/get-api-base-url";
 import { useAuth } from "@/app/store/auth.store";
+import { useNotificationsStore } from "@/app/store/notifications.store";
 
 export interface ChatMessage {
   id: string;
@@ -93,11 +94,13 @@ function normalizeServerMessage(
 }
 
 export function useChat(orderId: string | undefined) {
-  const { token, userId, incrementUnreadCount } = useAuth((state) => ({
+  const { token, userId } = useAuth((state) => ({
     token: state.token,
     userId: state.user?.id,
-    incrementUnreadCount: state.incrementUnreadCount,
   }));
+  const refreshNotifications = useNotificationsStore(
+    (state) => state.fetchNotifications,
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -159,14 +162,14 @@ export function useChat(orderId: string | undefined) {
         return;
       }
 
-      incrementUnreadCount();
+      void refreshNotifications();
     });
 
     return () => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [orderId, token, userId, incrementUnreadCount]);
+  }, [orderId, token, userId, refreshNotifications]);
 
   const initializeMessages = useCallback((history: ChatMessage[]) => {
     setMessages(

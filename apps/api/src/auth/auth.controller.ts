@@ -2,7 +2,7 @@
 import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
 import { SigninDto } from './dto/signin.dto';
 import { SignupDto } from './dto/signup.dto';
-import { AuthService } from './auth.service';
+import { AuthService, NotificationsSummary } from './auth.service';
 import { Get, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt.guard';
 
@@ -31,12 +31,8 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('me/notifications/unread-count')
-  async getUnreadNotifications(@Request() req): Promise<{ unreadCount: number }> {
-    const unreadCount = await this.authService.getUnreadMessagesCount(
-      req.user.sub,
-    );
-
-    return { unreadCount };
+  @Get('me/notifications')
+  getNotificationsSummary(@Request() req): Promise<NotificationsSummary> {
+    return this.authService.getUnreadNotifications(req.user.sub);
   }
 }
