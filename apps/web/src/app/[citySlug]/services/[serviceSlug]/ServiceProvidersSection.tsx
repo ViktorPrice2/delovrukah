@@ -63,56 +63,94 @@ function getBadges(id: string): string[] {
   return badges;
 }
 
+function getAvailability(id: string): string {
+  const hash = computeHash(id);
+  const mod = hash % 3;
+
+  if (mod === 0) {
+    return 'Готов приступить сегодня';
+  }
+
+  if (mod === 1) {
+    return 'Свободен завтра';
+  }
+
+  return `Старт через ${mod + 1} дня`;
+}
+
 function ProviderCard({ provider, service }: ProviderCardProps) {
   const initials = useMemo(() => getInitials(provider.displayName || provider.id), [provider]);
   const meta = useMemo(() => getRating(provider.id), [provider.id]);
   const badges = useMemo(() => getBadges(provider.id), [provider.id]);
+  const availability = useMemo(() => getAvailability(provider.id), [provider.id]);
 
   return (
-    <li className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-start gap-4">
-          <div className="flex h-14 w-14 flex-none items-center justify-center rounded-full bg-emerald-100 text-lg font-semibold text-emerald-700">
-            {initials || 'DR'}
-          </div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
+    <li className="group rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-14 w-14 flex-none items-center justify-center rounded-full bg-emerald-100 text-lg font-semibold text-emerald-700">
+              {initials || 'DR'}
+            </div>
+            <div className="space-y-1">
               <p className="text-base font-semibold text-slate-900">{provider.displayName}</p>
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="h-4 w-4"
-                  aria-hidden="true"
-                >
-                  <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                </svg>
-                {meta.rating.toFixed(1)}
-              </span>
-              <span className="text-xs text-slate-500">{meta.reviews} отзывов</span>
-            </div>
-            {provider.description ? (
-              <p className="text-sm leading-relaxed text-slate-600">{provider.description}</p>
-            ) : null}
-            <div className="flex flex-wrap gap-2 pt-1">
-              {badges.map((badge) => (
-                <span
-                  key={`${provider.id}-${badge}`}
-                  className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
-                >
-                  {badge}
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-700">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                  </svg>
+                  {meta.rating.toFixed(1)}
                 </span>
-              ))}
+                <span>{meta.reviews} отзывов</span>
+                <span className="flex items-center gap-1 text-emerald-600">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  {availability}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex flex-none flex-col items-end gap-2">
-          <div className="text-lg font-bold text-slate-900">
-            {provider.price.toLocaleString('ru-RU')} ₽
+          <div className="flex flex-none flex-col items-start sm:items-end">
+            <span className="text-lg font-bold text-slate-900">{provider.price.toLocaleString('ru-RU')} ₽</span>
+            {service.latestVersion?.unitOfMeasure ? (
+              <span className="text-xs text-slate-500">за {service.latestVersion.unitOfMeasure.toLowerCase()}</span>
+            ) : null}
           </div>
-          <AddToCartButton service={service} provider={provider} label="Выбрать" />
         </div>
+
+        {provider.description ? (
+          <p className="text-sm leading-relaxed text-slate-600">{provider.description}</p>
+        ) : null}
+
+        <div className="flex flex-wrap gap-2 text-xs">
+          {service.latestVersion?.estimatedTime ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600">
+              <span role="img" aria-label="Время">
+                ⏱️
+              </span>
+              {service.latestVersion.estimatedTime}
+            </span>
+          ) : null}
+          {badges.map((badge) => (
+            <span
+              key={`${provider.id}-${badge}`}
+              className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-semibold text-emerald-700"
+            >
+              {badge}
+            </span>
+          ))}
+        </div>
+
+        <AddToCartButton
+          service={service}
+          provider={provider}
+          label="Выбрать мастера"
+        />
       </div>
     </li>
   );

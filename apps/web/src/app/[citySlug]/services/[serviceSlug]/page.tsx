@@ -91,6 +91,26 @@ function InfoBadge({ label, value }: { label: string; value: string }) {
   );
 }
 
+function getAiSummary(description: string | null | undefined): string | null {
+  if (!description) {
+    return null;
+  }
+
+  const normalized = description.replace(/\s+/g, " ").trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  const sentences = normalized.split(/(?<=[.!?])\s+/).slice(0, 2);
+
+  if (sentences.length === 0) {
+    return null;
+  }
+
+  return sentences.join(" ");
+}
+
 export type ServicePageParams = {
   citySlug: string;
   serviceSlug: string;
@@ -236,63 +256,99 @@ export default async function ServicePage({ params, searchParams }: ServicePageP
     },
   ];
 
+  const aiSummary = getAiSummary(service.description ?? versionDescription);
+  const smartTags = [
+    {
+      id: "price",
+      label: "Стоимость",
+      value: formatPrice(minPrice),
+    },
+    {
+      id: "time",
+      label: "Время",
+      value: estimatedTime ?? "Уточняется",
+    },
+    {
+      id: "uom",
+      label: "Единица",
+      value: unitOfMeasure ?? "Уточняется",
+    },
+  ];
+
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-12 px-4 pb-16 pt-8 lg:px-0">
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr),minmax(0,1fr)]">
-        <div className="space-y-4">
-          {primaryMedia ? (
-            renderMediaElement(primaryMedia, 0, "primary")
-          ) : (
-            <div className="flex h-[360px] items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
-              Медиа скоро появится
-            </div>
-          )}
-          {secondaryMedia.length > 0 ? (
-            <div className="grid grid-cols-3 gap-3">
-              {secondaryMedia.map((item, index) => renderMediaElement(item, index + 1, "secondary"))}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="flex flex-col gap-6 rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
-          <nav className="text-sm text-slate-500">
-            <a href={`/${citySlug}`} className="hover:underline">
-              {cityName}
-            </a>
-            {" / "}
-            <a href={`/${citySlug}/${service.category.slug}`} className="hover:underline">
-              {service.category.name}
-            </a>
-          </nav>
+    <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 pb-16 pt-8 lg:flex-row lg:gap-12 lg:px-0">
+      <aside className="lg:w-[380px] lg:flex-none">
+        <div className="flex flex-col gap-6 lg:sticky lg:top-8">
           <div className="space-y-3">
-            <h1 className="text-4xl font-bold tracking-tight text-slate-900">{service.name}</h1>
-            <p className="text-xl font-semibold text-emerald-600">{formatPrice(minPrice)}</p>
+            {primaryMedia ? (
+              renderMediaElement(primaryMedia, 0, "primary")
+            ) : (
+              <div className="flex h-[360px] items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
+                Медиа скоро появится
+              </div>
+            )}
+            {secondaryMedia.length > 0 ? (
+              <div className="grid grid-cols-3 gap-3">
+                {secondaryMedia.map((item, index) => renderMediaElement(item, index + 1, "secondary"))}
+              </div>
+            ) : null}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <InfoBadge label="Оценочное время" value={estimatedTime ?? "Уточняется"} />
-            <InfoBadge label="Единица измерения" value={unitOfMeasure ?? "Уточняется"} />
+
+          <div className="space-y-6 rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
+            <nav className="text-sm text-slate-500">
+              <a href={`/${citySlug}`} className="hover:underline">
+                {cityName}
+              </a>
+              {" / "}
+              <a href={`/${citySlug}/${service.category.slug}`} className="hover:underline">
+                {service.category.name}
+              </a>
+            </nav>
+            <div className="space-y-3">
+              <h1 className="text-4xl font-bold tracking-tight text-slate-900">{service.name}</h1>
+              <p className="text-xl font-semibold text-emerald-600">{formatPrice(minPrice)}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {smartTags.map((tag) => (
+                <span
+                  key={tag.id}
+                  className="inline-flex min-w-[120px] flex-1 flex-col rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-left text-sm text-slate-700 shadow-sm"
+                >
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{tag.label}</span>
+                  <span className="mt-1 text-base font-semibold text-slate-900">{tag.value}</span>
+                </span>
+              ))}
+            </div>
+            {aiSummary ? (
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-5">
+                <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">AI-саммари</span>
+                <p className="mt-2 text-sm leading-relaxed text-slate-700">{aiSummary}</p>
+              </div>
+            ) : null}
+            <a
+              href="#providers"
+              className="inline-flex w-full items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-semibold text-white shadow transition hover:bg-emerald-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+            >
+              Выбрать мастера
+            </a>
+            {versionDescription && versionDescription !== service.description ? (
+              <p className="text-sm leading-relaxed text-slate-600">{versionDescription}</p>
+            ) : null}
           </div>
-          <a
-            href="#providers"
-            className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-semibold text-white shadow transition hover:bg-emerald-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
-          >
-            Выбрать мастера
-          </a>
-          {service.description ? (
-            <p className="text-base leading-relaxed text-slate-700">{service.description}</p>
-          ) : null}
-          {versionDescription && versionDescription !== service.description ? (
-            <p className="text-sm leading-relaxed text-slate-600">{versionDescription}</p>
-          ) : null}
         </div>
-      </section>
+      </aside>
 
-      <section className="space-y-6">
-        <h2 className="text-2xl font-semibold text-slate-900">Детали услуги</h2>
-        <Accordion items={detailItems} className="space-y-0" />
-      </section>
+      <div className="flex-1 space-y-10">
+        <ServiceProvidersSection providers={providers} service={service} cityName={cityName} />
 
-      <ServiceProvidersSection providers={providers} service={service} cityName={cityName} />
+        <section className="space-y-6 rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900">Детали услуги</h2>
+            <p className="mt-1 text-sm text-slate-500">Раскрываем условия и состав работ.</p>
+          </div>
+          <Accordion items={detailItems} className="space-y-0" />
+        </section>
+      </div>
     </div>
   );
 }
