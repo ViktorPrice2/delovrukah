@@ -4,9 +4,9 @@ import { api } from '@/lib/api';
 export interface ProviderProfile {
   id?: string;
   displayName: string;
-  description: string;
-  cityId: string | number;
-  cityName?: string;
+  description: string | null;
+  cityId: string | number | null;
+  cityName?: string | null;
 }
 
 interface UpdateProfilePayload {

@@ -27,24 +27,37 @@ export class CatalogService {
     });
     return categories.map((category) => this.mapCategory(category));
   }
-  
+
   // Этот метод остается для обратной совместимости или внутреннего использования
   async getServicesByCategory(
     categoryId: string,
   ): Promise<ServiceSummaryDto[]> {
     // ... (код этого метода без изменений)
-    const category = await this.prisma.category.findUnique({ where: { id: categoryId } });
-    if (!category) { throw new NotFoundException('Категория не найдена'); }
+    const category = await this.prisma.category.findUnique({
+      where: { id: categoryId },
+    });
+    if (!category) {
+      throw new NotFoundException('Категория не найдена');
+    }
     const services = await this.prisma.serviceTemplate.findMany({
       where: { categoryId },
       orderBy: { name: 'asc' },
-      include: { versions: { where: { isActive: true }, orderBy: { versionNumber: 'desc' }, take: 1 } },
+      include: {
+        versions: {
+          where: { isActive: true },
+          orderBy: { versionNumber: 'desc' },
+          take: 1,
+        },
+      },
     });
     return services.map((service) => this.mapServiceSummary(service));
   }
 
   // --- НАЧАЛО НОВОГО МЕТОДА ---
-  async getServicesByCategorySlug(citySlug: string, categorySlug: string): Promise<ServiceDetailDto[]> {
+  async getServicesByCategorySlug(
+    citySlug: string,
+    categorySlug: string,
+  ): Promise<ServiceDetailDto[]> {
     const services = await this.prisma.serviceTemplate.findMany({
       where: {
         category: {
@@ -62,10 +75,10 @@ export class CatalogService {
 
     // Для каждой найденной услуги асинхронно получаем ее детали
     // (включая провайдеров в нужном городе)
-    const detailedServicesPromises = services.map(service => 
-      this.getServiceBySlugOrId(service.slug, citySlug)
+    const detailedServicesPromises = services.map((service) =>
+      this.getServiceBySlugOrId(service.slug, citySlug),
     );
-    
+
     const detailedServices = await Promise.all(detailedServicesPromises);
 
     // Отфильтровываем возможные null, если какая-то услуга вдруг не нашлась
@@ -76,7 +89,8 @@ export class CatalogService {
   async getServiceBySlugOrId(
     slugOrId: string,
     citySlug?: string,
-  ): Promise<ServiceDetailDto | null> { // <-- Изменяем возвращаемый тип на Promise<ServiceDetailDto | null>
+  ): Promise<ServiceDetailDto | null> {
+    // <-- Изменяем возвращаемый тип на Promise<ServiceDetailDto | null>
     const service = await this.prisma.serviceTemplate.findFirst({
       where: {
         OR: [{ id: slugOrId }, { slug: slugOrId }],
@@ -101,7 +115,9 @@ export class CatalogService {
     const latestVersion = service.versions.at(0) ?? null;
     let providers: ServiceProviderDto[] | undefined;
     if (citySlug) {
-      const city = await this.prisma.city.findUnique({ where: { slug: citySlug } });
+      const city = await this.prisma.city.findUnique({
+        where: { slug: citySlug },
+      });
       if (!city || !latestVersion) {
         providers = [];
       } else {
@@ -115,13 +131,17 @@ export class CatalogService {
         });
         providers = prices
           .map((price) => {
-            if (!price.providerProfile.city) { return null; }
+            if (!price.providerProfile.city) {
+              return null;
+            }
             return this.mapServiceProvider(
               price.providerProfile as ProviderProfile & { city: City },
               price.price,
             );
           })
-          .filter((provider): provider is ServiceProviderDto => provider !== null);
+          .filter(
+            (provider): provider is ServiceProviderDto => provider !== null,
+          );
       }
     }
     return {
