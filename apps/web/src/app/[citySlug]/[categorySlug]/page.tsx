@@ -8,12 +8,17 @@ import { getServicesByCategory } from "../../lib/catalog-api";
 
 export const dynamic = "force-dynamic";
 
+type CategoryPageParams = {
+  citySlug: string;
+  categorySlug: string;
+};
+
 type CategoryPageProps = {
-  params: { citySlug: string; categorySlug: string };
+  params: Promise<CategoryPageParams>;
 };
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  const { citySlug, categorySlug } = params;
+  const { citySlug, categorySlug } = await params;
   
   // Формируем заголовки на основе слагов - это быстро и надежно
   const cityName = citySlug.charAt(0).toUpperCase() + citySlug.slice(1);
@@ -27,7 +32,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   // --- НАЧАЛО ИЗМЕНЕНИЙ В ЛОГИКЕ ---
-  const { citySlug, categorySlug } = params;
+  const { citySlug, categorySlug } = await params;
 
   console.log(`[SSR] Запрашиваю услуги: category=${categorySlug}, city=${citySlug}`);
   const services = await getServicesByCategory(citySlug, categorySlug);
