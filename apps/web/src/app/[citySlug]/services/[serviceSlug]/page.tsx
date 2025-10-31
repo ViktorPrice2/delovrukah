@@ -9,14 +9,18 @@ import type { ServiceDetail } from "@/app/types/catalog.types";
 
 export const dynamic = "force-dynamic";
 
+type ServicePageParams = {
+  citySlug: string;
+  serviceSlug: string;
+};
+
+type ServicePageSearchParams = {
+  id?: string;
+};
+
 type ServicePageProps = {
-  params: {
-    citySlug: string;
-    serviceSlug: string;
-  };
-  searchParams?: {
-    id?: string;
-  };
+  params: ServicePageParams | Promise<ServicePageParams>;
+  searchParams?: ServicePageSearchParams | Promise<ServicePageSearchParams>;
 };
 
 // --- ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ---
@@ -30,8 +34,9 @@ function getMinimalPrice(service: ServiceDetail): number | null {
 
 // --- ДИНАМИЧЕСКАЯ ГЕНЕРАЦИЯ МЕТАДАННЫХ ДЛЯ SEO ---
 export async function generateMetadata({ params, searchParams }: ServicePageProps): Promise<Metadata> {
-  const { citySlug, serviceSlug } = params;
-  const fallbackId = searchParams?.id;
+  const { citySlug, serviceSlug } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const fallbackId = resolvedSearchParams?.id;
 
   // Делаем ОДИН запрос, чтобы получить все данные
   const service = await getServiceDetailsBySlug(serviceSlug, citySlug, fallbackId);
@@ -55,8 +60,9 @@ export async function generateMetadata({ params, searchParams }: ServicePageProp
 
 // --- КОМПОНЕНТ СТРАНИЦЫ ---
 export default async function ServicePage({ params, searchParams }: ServicePageProps) {
-  const { citySlug, serviceSlug } = params;
-  const fallbackId = searchParams?.id;
+  const { citySlug, serviceSlug } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const fallbackId = resolvedSearchParams?.id;
 
   const service = await getServiceDetailsBySlug(serviceSlug, citySlug, fallbackId);
 
