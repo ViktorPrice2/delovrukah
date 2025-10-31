@@ -6,7 +6,19 @@
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
-    "lint": {},
+    "lint": {
+      "dependsOn": ["^lint"],
+      "cache": true,
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "eslint.config.*",
+        ".eslintrc.*",
+        "**/.eslintignore"
+      ],
+      "outputs": [],
+      "parallel": true,
+      "timeout": 300000
+    },
     "dev": {
       "cache": false,
       "persistent": true
