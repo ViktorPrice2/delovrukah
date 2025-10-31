@@ -29,4 +29,14 @@ export class AuthController {
     // Стратегия JWT уже расшифровала токен и положила данные в req.user
     return req.user;
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/notifications/unread-count')
+  async getUnreadNotifications(@Request() req): Promise<{ unreadCount: number }> {
+    const unreadCount = await this.authService.getUnreadMessagesCount(
+      req.user.sub,
+    );
+
+    return { unreadCount };
+  }
 }
