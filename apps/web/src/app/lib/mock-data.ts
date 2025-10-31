@@ -26,6 +26,15 @@ const ELECTRICAL_SERVICE_VERSION: ServiceVersion = {
   title: "Базовый пакет диагностики",
   description:
     "Комплексная проверка электропроводки с применением тепловизора и измерением сопротивления изоляции.",
+  whatsIncluded: [
+    "Визуальный осмотр электропроводки",
+    "Проверка силовых линий",
+    "Отчет с рекомендациями",
+  ],
+  whatsNotIncluded: ["Ремонт и замена оборудования"],
+  unitOfMeasure: "выезд",
+  requiredTools: ["Тепловизор", "Мультиметр"],
+  customerRequirements: ["Доступ к электрощиту", "Свободный доступ к розеткам"],
   isActive: true,
   createdAt: "2024-01-10T10:00:00.000Z",
   updatedAt: "2024-01-10T10:00:00.000Z",
@@ -60,6 +69,7 @@ const ELECTRICAL_SERVICE: ServiceDetail = {
   latestVersion: ELECTRICAL_SERVICE_VERSION,
   authorId: null,
   keeperId: null,
+  medianPrice: null,
   category: ELECTRICAL_CATEGORY,
   providers: NOVOSIBIRSK_PROVIDERS,
 };
@@ -76,12 +86,34 @@ function cloneCategory(category: Category): Category {
   return { ...category };
 }
 
+function cloneJsonValue<T>(value: T): T {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  const structuredCloneFn = (
+    globalThis as typeof globalThis & { structuredClone?: <JsonType>(input: JsonType) => JsonType }
+  ).structuredClone;
+
+  if (typeof structuredCloneFn === "function") {
+    return structuredCloneFn(value);
+  }
+
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 function cloneVersion(version: ServiceVersion | null): ServiceVersion | null {
   if (!version) {
     return null;
   }
 
-  return { ...version };
+  return {
+    ...version,
+    whatsIncluded: cloneJsonValue(version.whatsIncluded),
+    whatsNotIncluded: cloneJsonValue(version.whatsNotIncluded),
+    requiredTools: cloneJsonValue(version.requiredTools),
+    customerRequirements: cloneJsonValue(version.customerRequirements),
+  };
 }
 
 function cloneProvider(provider: Provider): Provider {

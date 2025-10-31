@@ -231,10 +231,11 @@ export class ProviderService {
     });
 
     if (serviceTemplateVersionIds.length > 0) {
-      const relatedServiceTemplates = await this.prisma.serviceTemplateVersion.findMany({
-        where: { id: { in: serviceTemplateVersionIds } },
-        select: { serviceTemplateId: true },
-      });
+      const relatedServiceTemplates =
+        await this.prisma.serviceTemplateVersion.findMany({
+          where: { id: { in: serviceTemplateVersionIds } },
+          select: { serviceTemplateId: true },
+        });
 
       const uniqueTemplateIds = new Set(
         relatedServiceTemplates.map((version) => version.serviceTemplateId),

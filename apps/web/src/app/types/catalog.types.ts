@@ -33,7 +33,12 @@ export interface ServiceVersion {
   id: string;
   versionNumber: number;
   title: string;
-  description: string | null;
+  description: string;
+  whatsIncluded: unknown;
+  whatsNotIncluded: unknown;
+  unitOfMeasure: string;
+  requiredTools: unknown;
+  customerRequirements: unknown;
   isActive: boolean;
   createdAt: string; // Даты приходят как строки в JSON
   updatedAt: string;
@@ -53,6 +58,7 @@ export interface ServiceSummary {
   description: string | null;
   categoryId: string;
   latestVersion: ServiceVersion | null;
+  medianPrice: number | null;
 }
 
 /**

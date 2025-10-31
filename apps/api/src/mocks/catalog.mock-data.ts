@@ -27,11 +27,15 @@ const ELECTRICAL_SERVICE_VERSION: ServiceVersionDto = {
   title: 'Базовый пакет диагностики',
   description:
     'Комплексная проверка электропроводки с применением тепловизора и измерением сопротивления изоляции.',
-  whatsIncluded: [],
-  whatsNotIncluded: [],
-  unitOfMeasure: '',
-  requiredTools: [],
-  customerRequirements: [],
+  whatsIncluded: [
+    'Визуальный осмотр электропроводки',
+    'Проверка силовых линий',
+    'Отчет с рекомендациями',
+  ],
+  whatsNotIncluded: ['Ремонт и замена оборудования'],
+  unitOfMeasure: 'выезд',
+  requiredTools: ['Тепловизор', 'Мультиметр'],
+  customerRequirements: ['Доступ к электрощиту', 'Свободный доступ к розеткам'],
   isActive: true,
   createdAt: new Date('2024-01-10T10:00:00.000Z'),
   updatedAt: new Date('2024-01-10T10:00:00.000Z'),
@@ -83,6 +87,24 @@ function cloneCategory(category: CategoryDto): CategoryDto {
   return { ...category };
 }
 
+function cloneJsonValue<T>(value: T): T {
+  if (value === null || typeof value !== 'object') {
+    return value;
+  }
+
+  const structuredCloneFn = (
+    globalThis as typeof globalThis & {
+      structuredClone?: <JsonType>(input: JsonType) => JsonType;
+    }
+  ).structuredClone;
+
+  if (typeof structuredCloneFn === 'function') {
+    return structuredCloneFn(value);
+  }
+
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 function cloneVersion(
   version: ServiceVersionDto | null,
 ): ServiceVersionDto | null {
@@ -92,6 +114,10 @@ function cloneVersion(
 
   return {
     ...version,
+    whatsIncluded: cloneJsonValue(version.whatsIncluded),
+    whatsNotIncluded: cloneJsonValue(version.whatsNotIncluded),
+    requiredTools: cloneJsonValue(version.requiredTools),
+    customerRequirements: cloneJsonValue(version.customerRequirements),
     createdAt: new Date(version.createdAt),
     updatedAt: new Date(version.updatedAt),
   };

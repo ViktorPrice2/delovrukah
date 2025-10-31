@@ -180,10 +180,7 @@ export class CatalogService {
           where: {
             serviceTemplateVersionId: latestVersion.id,
             providerProfile: { cityId: city.id },
-            OR: [
-              { expiresAt: null },
-              { expiresAt: { gt: new Date() } },
-            ],
+            OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
           },
           include: { providerProfile: { include: { city: true } } },
           orderBy: { price: 'asc' },
