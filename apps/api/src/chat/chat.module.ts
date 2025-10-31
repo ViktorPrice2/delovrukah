@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { OrdersModule } from '../orders/orders.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ChatGateway } from './chat.gateway';
+import { WsJwtGuard } from './ws-jwt.guard';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ChatGateway } from './chat.gateway';
       }),
     }),
   ],
-  providers: [ChatGateway],
+  providers: [ChatGateway, WsJwtGuard],
+  exports: [ChatGateway],
 })
 export class ChatModule {}
