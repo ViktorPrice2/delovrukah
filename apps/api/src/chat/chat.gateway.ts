@@ -11,6 +11,7 @@ import {
 import {
   ChatMessageResponseDto,
   OrdersService,
+  chatMessageSelect,
 } from '../orders/orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UseGuards } from '@nestjs/common';
@@ -97,17 +98,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         senderId: user.sub,
         text: trimmedText,
       },
+      select: chatMessageSelect,
     });
 
-    const payload: ChatMessageResponseDto = {
-      id: message.id,
-      orderId: message.orderId,
-      senderId: message.senderId,
-      text: message.text,
-      isRead: message.isRead,
-      createdAt: message.createdAt,
-      updatedAt: message.updatedAt,
-    };
+    const payload: ChatMessageResponseDto = { ...message };
 
     const room = this.getRoomName(orderId);
     this.server.to(room).emit('newMessage', payload);
