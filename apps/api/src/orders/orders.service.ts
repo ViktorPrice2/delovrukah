@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Order, OrderItem, Price } from '@prisma/client';
+import type { Prisma, Price } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 
@@ -21,7 +21,9 @@ export interface OrderResponseDto {
   items: OrderItemResponseDto[];
 }
 
-type OrderWithItems = Order & { items: OrderItem[] };
+type OrderWithItems = Prisma.OrderGetPayload<{
+  include: { items: true };
+}>;
 
 @Injectable()
 export class OrdersService {
