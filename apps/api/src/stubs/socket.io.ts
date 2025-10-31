@@ -23,8 +23,13 @@ export class Socket extends EventEmitter {
     };
   }
 
-  disconnect(_close?: boolean): void {
+  disconnect(closeConnection = false): void {
     this.server.detach(this);
+
+    if (closeConnection) {
+      this.server.close();
+    }
+
     this.emit('disconnect');
   }
 
@@ -34,9 +39,10 @@ export class Socket extends EventEmitter {
     }
   }
 
-  async join(room: string): Promise<void> {
+  join(room: string): Promise<void> {
     this.rooms.add(room);
     this.server.joinRoom(this, room);
+    return Promise.resolve();
   }
 }
 

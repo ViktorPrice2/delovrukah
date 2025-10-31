@@ -14,8 +14,7 @@ type CityPageProps = {
 };
 
 export async function generateMetadata({ params }: CityPageProps): Promise<Metadata> {
-  // Turbopack может передавать params как Promise, поэтому "разворачиваем" его
-  const { citySlug } = await params;
+  const { citySlug } = params;
   
   // Мы не можем легко получить имя города здесь без отдельного запроса,
   // поэтому генерируем title на основе слага. Это надежнее.
@@ -29,7 +28,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
 
 export default async function CityPage({ params }: CityPageProps) {
   // --- НАЧАЛО ИЗМЕНЕНИЙ В ЛОГИКЕ ---
-  const { citySlug } = await params; // "Разворачиваем" Promise
+  const { citySlug } = params;
 
   console.log(`[SSR] Запрашиваю категории для города: ${citySlug}`);
   // Делаем ОДИН запрос, чтобы получить все категории для этого города

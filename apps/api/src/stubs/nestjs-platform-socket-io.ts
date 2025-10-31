@@ -5,9 +5,11 @@ import { Server, Socket } from './socket.io';
 
 type MessageHandler = {
   message: unknown;
-  callback: (...args: any[]) => any;
+  callback: (...args: unknown[]) => unknown;
   isAckHandledManually: boolean;
 };
+
+type AckCallback = (...args: unknown[]) => void;
 
 function toObservable<T>(value: T | Promise<T> | Observable<T>): Observable<T> {
   if (isObservable(value)) {
@@ -18,43 +20,55 @@ function toObservable<T>(value: T | Promise<T> | Observable<T>): Observable<T> {
     return from(value);
   }
 
-  return of(value as T);
+  return of(value);
 }
 
 export class IoAdapter implements WebSocketAdapter<Server, Socket> {
   // Accept optional arguments to stay compatible with older NestJS versions
-  constructor(..._args: unknown[]) {}
+  constructor(...args: unknown[]) {
+    void args.length;
+  }
 
-  create(_port: number, _options?: unknown): Server {
+  create(port: number, options?: unknown): Server {
+    void port;
+    void options;
     return new Server();
   }
 
-  createIOServer(_port: number, _options?: unknown): Server {
+  createIOServer(port: number, options?: unknown): Server {
+    void port;
+    void options;
     return new Server();
   }
 
-  bindClientConnect(server: Server, callback: Function): void {
-    server.on('connection', callback as (client: Socket) => void);
+  bindClientConnect(server: Server, callback: (client: Socket) => void): void {
+    server.on('connection', callback);
   }
 
-  bindClientDisconnect(client: Socket, callback: Function): void {
-    client.on('disconnect', callback as () => void);
+  bindClientDisconnect(client: Socket, callback: () => void): void {
+    client.on('disconnect', callback);
   }
 
   bindMessageHandlers(
     client: Socket,
     handlers: MessageHandler[],
-    transform: (data: any) => Observable<any>,
+    transform: (data: unknown) => Observable<unknown>,
   ): void {
     for (const handler of handlers) {
-      client.on(handler.message as string, (...args: any[]) => {
+      client.on(String(handler.message), (...args: unknown[]) => {
         const maybeAck = args[args.length - 1];
-        const ack = typeof maybeAck === 'function' ? (args.pop() as Function) : undefined;
+        const ack =
+          typeof maybeAck === 'function'
+            ? (args.pop() as AckCallback)
+            : undefined;
         const result = handler.callback(...args);
         const response$ = toObservable(transform(result));
 
         if (handler.isAckHandledManually || !ack) {
-          response$.subscribe();
+          response$.subscribe({
+            next: () => undefined,
+            error: () => undefined,
+          });
           return;
         }
 

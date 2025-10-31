@@ -7,12 +7,7 @@ import { WsAuthGuard } from '../auth/ws-auth.guard';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [
-    ConfigModule,
-    PrismaModule,
-    OrdersModule,
-    AuthModule,
-  ],
+  imports: [ConfigModule, PrismaModule, OrdersModule, AuthModule],
   providers: [ChatGateway, WsAuthGuard],
   exports: [ChatGateway],
 })

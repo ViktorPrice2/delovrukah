@@ -39,7 +39,9 @@ export function resolveJwtSecret(configService: ConfigService): string {
       throw new Error(message);
     }
 
-    return resolveForDevelopment('JWT_SECRET environment variable is not defined.');
+    return resolveForDevelopment(
+      'JWT_SECRET environment variable is not defined.',
+    );
   }
 
   if (secret.length < MIN_SECRET_LENGTH) {

@@ -41,7 +41,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly ordersService: OrdersService,
   ) {}
 
-  async handleConnection(client: AuthenticatedSocket): Promise<void> {
+  handleConnection(client: AuthenticatedSocket): void {
     const token = this.extractToken(client);
 
     if (token) {
@@ -144,7 +144,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private getUserFromClient(client: AuthenticatedSocket): JwtPayload {
     if (client.user) {
-      return client.user as JwtPayload;
+      return client.user;
     }
 
     throw new WsException('Unauthorized');

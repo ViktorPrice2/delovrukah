@@ -137,15 +137,22 @@ export class AuthService {
       0,
     );
 
-    const ordersWithUnread = unreadByOrder
+    const ordersByRecency = unreadByOrder
       .map((group) => ({
         orderId: group.orderId,
         orderNumber: orderNumberMap.get(group.orderId) ?? group.orderId,
         unreadInOrder: group._count.orderId,
         latestMessageAt: group._max.createdAt ?? new Date(0),
       }))
-      .sort((a, b) => b.latestMessageAt.getTime() - a.latestMessageAt.getTime())
-      .map(({ latestMessageAt: _latestMessageAt, ...rest }) => rest);
+      .sort(
+        (a, b) => b.latestMessageAt.getTime() - a.latestMessageAt.getTime(),
+      );
+
+    const ordersWithUnread = ordersByRecency.map((group) => ({
+      orderId: group.orderId,
+      orderNumber: group.orderNumber,
+      unreadInOrder: group.unreadInOrder,
+    }));
 
     return { totalUnreadCount, ordersWithUnread };
   }
