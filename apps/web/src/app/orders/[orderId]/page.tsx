@@ -104,7 +104,10 @@ export default function OrderDetailsPage({ params }: OrderPageProps) {
       return;
     }
 
-    if (user.role !== "CUSTOMER") {
+    const isCustomerOrProvider =
+      user.role === "CUSTOMER" || user.role === "PROVIDER";
+
+    if (!isCustomerOrProvider) {
       router.replace("/");
       return;
     }
