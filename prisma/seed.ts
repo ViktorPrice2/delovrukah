@@ -686,7 +686,7 @@ async function setProviderHomeLocation(
   await prisma.$executeRaw`
     UPDATE "ProviderProfile"
     SET "homeLocation" = ST_SetSRID(
-      ST_MakePoint(${longitude}::double precision, ${latitude}::double precision),
+      ST_MakePoint(${longitude}, ${latitude}),
       4326
     )::point
     WHERE "id" = ${providerProfileId}
@@ -779,8 +779,10 @@ async function seedProviders(
 }
 
 async function main() {
+  await prisma.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS postgis;`);
+  console.log(`PostGIS extension ensured.`);
   console.log('Starting seed...');
-  
+
   // 1. Создаем тестового пользователя-автора
   const author = await prisma.user.upsert({
     where: { email: 'catalog-author@example.com' },
