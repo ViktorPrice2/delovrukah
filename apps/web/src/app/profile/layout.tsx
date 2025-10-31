@@ -29,10 +29,14 @@ export default function ProfileLayout({
       return;
     }
 
+    if (!pathname?.startsWith("/profile")) {
+      return;
+    }
+
     if (!token || !user || user.role !== "PROVIDER") {
       router.replace("/");
     }
-  }, [isLoading, token, user, router]);
+  }, [isLoading, pathname, token, user, router]);
 
   if (isLoading) {
     return <div className="p-6">Загрузка...</div>;
