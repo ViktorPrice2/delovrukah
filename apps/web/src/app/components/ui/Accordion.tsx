@@ -72,16 +72,16 @@ export function Accordion({ items, allowMultipleOpen = true, className }: Accord
                 type="button"
                 onClick={() => handleToggle(item.id)}
                 aria-expanded={isOpen}
-                className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+                className="flex w-full items-center gap-6 px-6 py-5 text-left transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
               >
-                <div>
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
                   <p className="text-lg font-semibold text-slate-900">{item.title}</p>
                   {item.description ? (
-                    <p className="mt-1 text-sm text-slate-500">{item.description}</p>
+                    <p className="text-sm text-slate-500">{item.description}</p>
                   ) : null}
                 </div>
                 <span
-                  className="inline-flex h-7 w-7 flex-none items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition group-hover:border-emerald-400 group-hover:text-emerald-600"
+                  className="relative flex h-10 w-10 flex-none items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition group-hover:border-emerald-400 group-hover:text-emerald-600"
                   aria-hidden="true"
                 >
                   <svg
@@ -89,12 +89,12 @@ export function Accordion({ items, allowMultipleOpen = true, className }: Accord
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth={2}
+                    strokeWidth={1.8}
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    className={`h-4 w-4 transition-transform duration-300 ease-out ${isOpen ? 'rotate-180' : 'rotate-0'}`}
                   >
-                    <polyline points="6 9 12 15 18 9" />
+                    <path d="M7.5 10.5 12 15l4.5-4.5" />
                   </svg>
                 </span>
               </button>
@@ -103,7 +103,7 @@ export function Accordion({ items, allowMultipleOpen = true, className }: Accord
                   isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
                 }`}
               >
-                <div className="overflow-hidden px-5 pb-6 text-sm text-slate-700">
+                <div className="overflow-hidden px-6 pb-6 text-sm text-slate-700">
                   {typeof item.content === 'string' ? <p>{item.content}</p> : item.content}
                 </div>
               </div>
