@@ -1,17 +1,5 @@
-
+import { getApiBaseUrl } from "@/lib/get-api-base-url";
 import type { Category, City, ServiceDetail } from "../types/catalog.types";
-
-function getApiBaseUrl(): string {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  if (!baseUrl) {
-    throw new Error(
-      "NEXT_PUBLIC_API_BASE_URL is not defined in .env.local file."
-    );
-  }
-
-  return baseUrl;
-}
 
 /**
  * Обертка для fetch, которая обрабатывает ответы от API.
