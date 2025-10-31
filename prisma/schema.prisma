@@ -25,35 +25,35 @@ model City {
 }
 
 model User {
-  id              String           @id @default(cuid())
-  email           String           @unique
-  phone           String?          @unique
-  passwordHash    String
-  role            Role
-  providerProfile ProviderProfile?
-  customerProfile CustomerProfile?
+  id               String            @id @default(cuid())
+  email            String            @unique
+  phone            String?           @unique
+  passwordHash     String
+  role             Role
+  providerProfile  ProviderProfile?
+  customerProfile  CustomerProfile?
   authoredServices ServiceTemplate[] @relation("AuthoredServices") // <-- Связь для Автора
-  chatMessages    ChatMessage[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  chatMessages     ChatMessage[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@index([role])
 }
 
 model ProviderProfile {
-  id               String            @id @default(cuid())
-  userId           String            @unique
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  displayName      String
-  description      String?
-  cityId           String?
-  city             City?             @relation(fields: [cityId], references: [id], onDelete: SetNull)
-  homeLocation     Unsupported("point")?
-  prices           Price[]
-  keptServices     ServiceTemplate[] @relation("KeptServices") // <-- Связь для Хранителя
-  orderItems       OrderItem[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id           String                @id @default(cuid())
+  userId       String                @unique
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName  String
+  description  String?
+  cityId       String?
+  city         City?                 @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  homeLocation Unsupported("point")?
+  prices       Price[]
+  keptServices ServiceTemplate[]     @relation("KeptServices") // <-- Связь для Хранителя
+  orderItems   OrderItem[]
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
 
   @@index([cityId])
 }
@@ -80,24 +80,25 @@ model Category {
 }
 
 model ServiceTemplate {
-  id          String                 @id @default(cuid())
+  id          String   @id @default(cuid())
   categoryId  String
   name        String
-  slug        String                 // <-- ИСПРАВЛЕНО: Добавлено поле slug
+  slug        String // <-- ИСПРАВЛЕНО: Добавлено поле slug
   description String?
-  
+  medianPrice Decimal? @db.Decimal(10, 2)
+
   // ИСПРАВЛЕНО: Автор - это User, может быть null
-  authorId    String?
-  author      User?                  @relation("AuthoredServices", fields: [authorId], references: [id], onDelete: SetNull)
+  authorId String?
+  author   User?   @relation("AuthoredServices", fields: [authorId], references: [id], onDelete: SetNull)
 
   // ИСПРАВЛЕНО: Хранитель - это ProviderProfile, может быть null
-  keeperId    String?
-  keeper      ProviderProfile?       @relation("KeptServices", fields: [keeperId], references: [id], onDelete: SetNull)
+  keeperId String?
+  keeper   ProviderProfile? @relation("KeptServices", fields: [keeperId], references: [id], onDelete: SetNull)
 
-  category    Category               @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  versions    ServiceTemplateVersion[]
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
+  category  Category                 @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  versions  ServiceTemplateVersion[]
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
 
   @@unique([categoryId, name])
   @@unique([categoryId, slug]) // <-- ИСПРАВЛЕНО: Добавлен уникальный индекс
@@ -107,17 +108,22 @@ model ServiceTemplate {
 }
 
 model ServiceTemplateVersion {
-  id                String          @id @default(cuid())
-  serviceTemplateId String
-  versionNumber     Int
-  title             String
-  description       String?
-  isActive          Boolean         @default(true)
-  serviceTemplate   ServiceTemplate @relation(fields: [serviceTemplateId], references: [id], onDelete: Cascade)
-  prices            Price[]
-  orderItems        OrderItem[]
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  id                   String          @id @default(cuid())
+  serviceTemplateId    String
+  versionNumber        Int
+  title                String
+  description          String
+  whatsIncluded        Json
+  whatsNotIncluded     Json
+  unitOfMeasure        String
+  requiredTools        Json
+  customerRequirements Json
+  isActive             Boolean         @default(true)
+  serviceTemplate      ServiceTemplate @relation(fields: [serviceTemplateId], references: [id], onDelete: Cascade)
+  prices               Price[]
+  orderItems           OrderItem[]
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
 
   @@unique([serviceTemplateId, versionNumber])
   @@index([serviceTemplateId, isActive])
@@ -128,6 +134,7 @@ model Price {
   providerProfileId        String
   serviceTemplateVersionId String
   price                    Decimal                @db.Decimal(10, 2)
+  expiresAt                DateTime?              @default(dbgenerated("(now() + interval '90 day')"))
   providerProfile          ProviderProfile        @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
   serviceTemplateVersion   ServiceTemplateVersion @relation(fields: [serviceTemplateVersionId], references: [id], onDelete: Cascade)
   createdAt                DateTime               @default(now())
