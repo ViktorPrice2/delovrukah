@@ -22,6 +22,11 @@ export interface OrderResponseDto {
   items: OrderItemResponseDto[];
 }
 
+export interface ChatMessageSenderResponseDto {
+  id: string;
+  displayName?: string;
+}
+
 export interface ChatMessageResponseDto {
   id: string;
   orderId: string;
@@ -30,6 +35,8 @@ export interface ChatMessageResponseDto {
   isRead: boolean;
   createdAt: Date;
   updatedAt: Date;
+  senderName?: string;
+  sender?: ChatMessageSenderResponseDto;
 }
 
 export const chatMessageSelect = {
@@ -40,11 +47,63 @@ export const chatMessageSelect = {
   isRead: true,
   createdAt: true,
   updatedAt: true,
+  sender: {
+    select: {
+      id: true,
+      customerProfile: {
+        select: {
+          fullName: true,
+        },
+      },
+      providerProfile: {
+        select: {
+          displayName: true,
+        },
+      },
+    },
+  },
 } satisfies Prisma.ChatMessageSelect;
 
-type SelectedChatMessage = Prisma.ChatMessageGetPayload<{
+export type SelectedChatMessage = Prisma.ChatMessageGetPayload<{
   select: typeof chatMessageSelect;
 }>;
+
+export function mapChatMessageResponse(
+  message: SelectedChatMessage,
+): ChatMessageResponseDto {
+  const senderDisplayNameCandidate =
+    message.sender?.providerProfile?.displayName ??
+    message.sender?.customerProfile?.fullName ??
+    null;
+
+  const normalizedSenderName =
+    typeof senderDisplayNameCandidate === 'string' &&
+    senderDisplayNameCandidate.trim().length > 0
+      ? senderDisplayNameCandidate.trim()
+      : undefined;
+
+  const response: ChatMessageResponseDto = {
+    id: message.id,
+    orderId: message.orderId,
+    senderId: message.senderId,
+    text: message.text,
+    isRead: message.isRead,
+    createdAt: message.createdAt,
+    updatedAt: message.updatedAt,
+  };
+
+  if (normalizedSenderName) {
+    response.senderName = normalizedSenderName;
+  }
+
+  if (message.sender) {
+    response.sender = normalizedSenderName
+      ? { id: message.sender.id, displayName: normalizedSenderName }
+      : { id: message.sender.id };
+  }
+
+  return response;
+}
 
 type OrderWithItems = Prisma.OrderGetPayload<{
   include: { items: true };
@@ -196,7 +255,7 @@ export class OrdersService {
       select: chatMessageSelect,
     });
 
-    return messages.map((message) => this.mapChatMessage(message));
+    return messages.map((message) => mapChatMessageResponse(message));
   }
 
   async markMessagesAsRead(
@@ -233,7 +292,7 @@ export class OrdersService {
       select: chatMessageSelect,
     });
 
-    return messages.map((message) => this.mapChatMessage(message));
+    return messages.map((message) => mapChatMessageResponse(message));
   }
 
   private mapPrices(prices: Price[]): Map<string, Price> {
@@ -264,10 +323,6 @@ export class OrdersService {
         updatedAt: item.updatedAt,
       })),
     };
-  }
-
-  private mapChatMessage(message: SelectedChatMessage): ChatMessageResponseDto {
-    return { ...message };
   }
 
   private getServiceKey(

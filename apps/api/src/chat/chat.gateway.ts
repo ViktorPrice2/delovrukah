@@ -12,6 +12,7 @@ import {
   ChatMessageResponseDto,
   OrdersService,
   chatMessageSelect,
+  mapChatMessageResponse,
 } from '../orders/orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UseGuards } from '@nestjs/common';
@@ -101,7 +102,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       select: chatMessageSelect,
     });
 
-    const payload: ChatMessageResponseDto = { ...message };
+    const payload: ChatMessageResponseDto = mapChatMessageResponse(message);
 
     const room = this.getRoomName(orderId);
     this.server.to(room).emit('newMessage', payload);
