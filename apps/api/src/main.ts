@@ -3,9 +3,13 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { SocketIoAdapter } from './adapters/socket-io.adapter';
+import { AppLogger } from './logger/app-logger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const logger = new AppLogger('ApiBootstrap');
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.useLogger(logger);
+  app.flushLogs();
   const configService = app.get(ConfigService);
   app.useWebSocketAdapter(new SocketIoAdapter(app, configService));
   app.enableCors({
@@ -30,8 +34,7 @@ async function bootstrap() {
 
   const port = 3001; // Задаем порт в переменную
   await app.listen(port);
-  // Вот эта строка - самая важная для нас сейчас
-  console.log(`API is running on: http://localhost:${port}`);
+  logger.log(`API is running on: http://localhost:${port}`);
 }
 
 void bootstrap();

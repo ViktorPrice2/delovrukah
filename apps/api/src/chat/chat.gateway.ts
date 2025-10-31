@@ -18,6 +18,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UseGuards } from '@nestjs/common';
 import { JwtPayload } from '../auth/jwt.strategy';
 import { AuthenticatedSocket, WsAuthGuard } from '../auth/ws-auth.guard';
+import { AppLogger } from '../logger/app-logger';
 
 interface BroadcastOperator {
   emit(event: string, payload: unknown): void;
@@ -27,11 +28,13 @@ interface ChatServer {
   to(room: string): BroadcastOperator;
 }
 
-@WebSocketGateway({ cors: { origin: '*' } })
+@WebSocketGateway()
 @UseGuards(WsAuthGuard)
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: ChatServer;
+
+  private readonly logger = new AppLogger(ChatGateway.name);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -45,11 +48,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.handshake.headers.authorization = `Bearer ${token}`;
     }
 
-    console.log('[ChatGateway] handleConnection', client.id);
+    this.logger.log(`Client connected: ${client.id}`);
   }
 
   handleDisconnect(client: AuthenticatedSocket): void {
-    console.log('[ChatGateway] handleDisconnect', client.id);
+    this.logger.log(`Client disconnected: ${client.id}`);
     client.leaveAll();
   }
 

@@ -1,8 +1,8 @@
-import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AppLogger } from '../logger/app-logger';
 
-const DEFAULT_JWT_SECRET = 'insecure-development-secret';
-const logger = new Logger('AuthConfig');
+const MIN_SECRET_LENGTH = 32;
+const logger = new AppLogger('AuthConfig');
 
 function normalizeSecret(secret: string | undefined | null): string | null {
   if (!secret) {
@@ -15,30 +15,18 @@ function normalizeSecret(secret: string | undefined | null): string | null {
 
 export function resolveJwtSecret(configService: ConfigService): string {
   const secret = normalizeSecret(configService.get<string>('JWT_SECRET'));
-  if (secret) {
-    return secret;
+
+  if (!secret) {
+    const message = 'JWT_SECRET environment variable must be defined.';
+    logger.error(message);
+    throw new Error(message);
   }
 
-  const fallback = normalizeSecret(
-    configService.get<string>('JWT_SECRET_FALLBACK'),
-  );
-  if (fallback) {
-    if (process.env.NODE_ENV !== 'test') {
-      logger.warn(
-        'JWT_SECRET is not set. Using JWT_SECRET_FALLBACK value.',
-      );
-    }
-    return fallback;
+  if (secret.length < MIN_SECRET_LENGTH) {
+    const message = `JWT_SECRET must be at least ${MIN_SECRET_LENGTH} characters long.`;
+    logger.error(message);
+    throw new Error(message);
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    if (process.env.NODE_ENV !== 'test') {
-      logger.warn(
-        'JWT_SECRET is not set. Falling back to insecure development secret.',
-      );
-    }
-    return DEFAULT_JWT_SECRET;
-  }
-
-  throw new Error('JWT secret is not configured');
+  return secret;
 }
