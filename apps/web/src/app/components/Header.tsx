@@ -45,6 +45,7 @@ export default function Header() {
 
     return user.role === 'PROVIDER' ? '/profile' : '/orders';
   }, [user]);
+  const isProvider = user?.role === 'PROVIDER';
 
   return (
     <header className="sticky top-0 z-10 border-b bg-white/80 shadow-sm backdrop-blur">
@@ -96,6 +97,14 @@ export default function Header() {
               >
                 Профиль
               </Link>
+              {isProvider ? (
+                <Link
+                  href="/orders"
+                  className="rounded-md border border-transparent px-4 py-2 transition hover:border-slate-200 hover:bg-slate-100"
+                >
+                  Мои заказы
+                </Link>
+              ) : null}
               <button
                 type="button"
                 onClick={logout}

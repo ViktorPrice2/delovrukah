@@ -22,8 +22,12 @@ export default function OrdersLayout({
       return;
     }
 
-    if (!token || !user || user.role !== "CUSTOMER") {
-      router.replace("/");
+    if (
+      !token ||
+      !user ||
+      (user.role !== "CUSTOMER" && user.role !== "PROVIDER")
+    ) {
+      router.replace("/signin");
     }
   }, [isLoading, token, user, router]);
 
@@ -31,7 +35,11 @@ export default function OrdersLayout({
     return <div className="p-6">Загрузка...</div>;
   }
 
-  if (!token || !user || user.role !== "CUSTOMER") {
+  if (
+    !token ||
+    !user ||
+    (user.role !== "CUSTOMER" && user.role !== "PROVIDER")
+  ) {
     return null;
   }
 
