@@ -31,7 +31,13 @@ export default function ProviderDashboardPage() {
             Здесь собрана краткая информация о вашем профиле.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/orders"
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-500"
+          >
+            Мои заказы
+          </Link>
           <Link
             href="/profile/settings"
             className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-500"
