@@ -144,15 +144,20 @@ export function AuthForm({
 
     } catch (error) {
       // ПРАВИЛЬНАЯ ОБРАБОТКА ДЛЯ ТИПА 'unknown'
-      if (axios.isAxiosError(error) && error.response) {
-        // Теперь TypeScript уверен, что 'error' - это AxiosError
-        // и у него есть свойство 'response'
-        console.error('Ошибка API:', error.response.data);
-        
-        // Получаем сообщение об ошибке. Оно может быть в error.response.data.message
-        const errorMessage = error.response.data?.message || 'Произошла ошибка при запросе к серверу.';
-        setServerError(errorMessage);
-        
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          // Теперь TypeScript уверен, что 'error' - это AxiosError
+          // и у него есть свойство 'response'
+          console.error('Ошибка API:', error.response.data);
+
+          // Получаем сообщение об ошибке. Оно может быть в error.response.data.message
+          const errorMessage = error.response.data?.message || 'Произошла ошибка при запросе к серверу.';
+          setServerError(errorMessage);
+        } else {
+          console.error('Ошибка сети или отсутствует ответ от сервера:', error);
+          setServerError('Не удалось подключиться к серверу. Пожалуйста, проверьте ваше интернет-соединение.');
+        }
+
       } else {
         // Обработка всех остальных видов ошибок
         console.error('Произошла неизвестная ошибка:', error);
