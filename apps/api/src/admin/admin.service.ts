@@ -4,10 +4,27 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AdminCategoryDto } from './dto/category.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { AdminServiceTemplateDto } from './dto/service-template.dto';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
+import {
+  AdminServiceTemplateDto,
+  adminServiceTemplateInclude,
+} from './dto/service-template.dto';
 
+const emptyJsonArray = [] as Prisma.InputJsonValue;
+
+const toJsonInputValue = (
+  value: unknown,
+  fallback: Prisma.InputJsonValue = emptyJsonArray,
+): Prisma.JsonNullValueInput | Prisma.InputJsonValue => {
+  if (value === null) {
+    return Prisma.JsonNull;
+  }
+  if (value === undefined) {
+    return fallback;
+  }
+  return value as Prisma.InputJsonValue;
+};
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
@@ -85,10 +102,7 @@ export class AdminService {
   async listServices(): Promise<AdminServiceTemplateDto[]> {
     const templates = await this.prisma.serviceTemplate.findMany({
       orderBy: { updatedAt: 'desc' },
-      include: {
-        category: true,
-        versions: { orderBy: { versionNumber: 'desc' } },
-      },
+      include: adminServiceTemplateInclude,
     });
 
     return templates.map((template) =>
@@ -99,10 +113,7 @@ export class AdminService {
   async getService(id: string): Promise<AdminServiceTemplateDto> {
     const template = await this.prisma.serviceTemplate.findUnique({
       where: { id },
-      include: {
-        category: true,
-        versions: { orderBy: { versionNumber: 'desc' } },
-      },
+      include: adminServiceTemplateInclude,
     });
 
     if (!template) {
@@ -114,40 +125,48 @@ export class AdminService {
 
   async createService(dto: CreateServiceDto): Promise<AdminServiceTemplateDto> {
     const medianPrice =
-      dto.medianPrice === undefined || dto.medianPrice === null
-        ? null
-        : new Prisma.Decimal(dto.medianPrice);
+      dto.medianPrice === undefined
+        ? undefined
+        : dto.medianPrice === null
+          ? null
+          : new Prisma.Decimal(dto.medianPrice);
+
+    const maxTimeIncluded =
+      dto.version.maxTimeIncluded === undefined
+        ? undefined
+        : dto.version.maxTimeIncluded;
+
+    const media = toJsonInputValue(dto.version.media);
 
     const template = await this.prisma.serviceTemplate.create({
       data: {
         categoryId: dto.categoryId,
         name: dto.name,
         slug: dto.slug,
-        description: dto.description ?? null,
+        description: dto.description ?? undefined,
         medianPrice,
-        authorId: dto.authorId ?? null,
-        keeperId: dto.keeperId ?? null,
+        authorId: dto.authorId ?? undefined,
+        keeperId: dto.keeperId ?? undefined,
         versions: {
           create: {
             versionNumber: 1,
             title: dto.version.title,
             description: dto.version.description,
-            whatsIncluded: dto.version.whatsIncluded ?? [],
-            whatsNotIncluded: dto.version.whatsNotIncluded ?? [],
+            whatsIncluded: toJsonInputValue(dto.version.whatsIncluded),
+            whatsNotIncluded: toJsonInputValue(dto.version.whatsNotIncluded),
             unitOfMeasure: dto.version.unitOfMeasure,
-            requiredTools: dto.version.requiredTools ?? [],
-            customerRequirements: dto.version.customerRequirements ?? [],
-            estimatedTime: dto.version.estimatedTime ?? null,
-            maxTimeIncluded: dto.version.maxTimeIncluded ?? null,
-            media: dto.version.media ?? [],
+            requiredTools: toJsonInputValue(dto.version.requiredTools),
+            customerRequirements: toJsonInputValue(
+              dto.version.customerRequirements,
+            ),
+            estimatedTime: dto.version.estimatedTime,
+            maxTimeIncluded,
+            media,
             isActive: true,
           },
         },
       },
-      include: {
-        category: true,
-        versions: { orderBy: { versionNumber: 'desc' } },
-      },
+      include: adminServiceTemplateInclude,
     });
 
     return AdminServiceTemplateDto.fromEntity(template);
@@ -193,10 +212,16 @@ export class AdminService {
         updateData.medianPrice = medianPrice;
       }
       if (dto.authorId !== undefined) {
-        updateData.authorId = dto.authorId;
+        updateData.author =
+          dto.authorId === null
+            ? { disconnect: true }
+            : { connect: { id: dto.authorId } };
       }
       if (dto.keeperId !== undefined) {
-        updateData.keeperId = dto.keeperId;
+        updateData.keeper =
+          dto.keeperId === null
+            ? { disconnect: true }
+            : { connect: { id: dto.keeperId } };
       }
 
       await tx.serviceTemplate.update({
@@ -211,30 +236,36 @@ export class AdminService {
 
       const latestVersionNumber = existing.versions.at(0)?.versionNumber ?? 0;
 
+      const nextVersionMaxTimeIncluded =
+        dto.version.maxTimeIncluded === undefined
+          ? undefined
+          : dto.version.maxTimeIncluded;
+
+      const nextVersionMedia = toJsonInputValue(dto.version.media);
+
       await tx.serviceTemplateVersion.create({
         data: {
           serviceTemplateId: id,
           versionNumber: latestVersionNumber + 1,
           title: dto.version.title,
           description: dto.version.description,
-          whatsIncluded: dto.version.whatsIncluded ?? [],
-          whatsNotIncluded: dto.version.whatsNotIncluded ?? [],
+          whatsIncluded: toJsonInputValue(dto.version.whatsIncluded),
+          whatsNotIncluded: toJsonInputValue(dto.version.whatsNotIncluded),
           unitOfMeasure: dto.version.unitOfMeasure,
-          requiredTools: dto.version.requiredTools ?? [],
-          customerRequirements: dto.version.customerRequirements ?? [],
-          estimatedTime: dto.version.estimatedTime ?? null,
-          maxTimeIncluded: dto.version.maxTimeIncluded ?? null,
-          media: dto.version.media ?? [],
+          requiredTools: toJsonInputValue(dto.version.requiredTools),
+          customerRequirements: toJsonInputValue(
+            dto.version.customerRequirements,
+          ),
+          estimatedTime: dto.version.estimatedTime,
+          maxTimeIncluded: nextVersionMaxTimeIncluded,
+          media: nextVersionMedia,
           isActive: true,
         },
       });
 
       return tx.serviceTemplate.findUniqueOrThrow({
         where: { id },
-        include: {
-          category: true,
-          versions: { orderBy: { versionNumber: 'desc' } },
-        },
+        include: adminServiceTemplateInclude,
       });
     });
 

@@ -1,8 +1,14 @@
-import {
-  Category,
-  ServiceTemplate,
-  ServiceTemplateVersion,
-} from '@prisma/client';
+import { Prisma, ServiceTemplateVersion } from '@prisma/client';
+
+export const adminServiceTemplateInclude =
+  Prisma.validator<Prisma.ServiceTemplateInclude>()({
+    category: true,
+    versions: { orderBy: { versionNumber: 'desc' as const } },
+  });
+
+export type AdminServiceTemplateWithRelations = Prisma.ServiceTemplateGetPayload<{
+  include: typeof adminServiceTemplateInclude;
+}>;
 
 export class AdminServiceVersionDto {
   id!: string;
@@ -10,13 +16,13 @@ export class AdminServiceVersionDto {
   versionNumber!: number;
   title!: string;
   description!: string;
-  whatsIncluded!: unknown;
-  whatsNotIncluded!: unknown;
+  whatsIncluded!: Prisma.JsonValue;
+  whatsNotIncluded!: Prisma.JsonValue;
   unitOfMeasure!: string;
-  requiredTools!: unknown;
-  customerRequirements!: unknown;
-  media!: unknown;
-  estimatedTime!: string | null;
+  requiredTools!: Prisma.JsonValue;
+  customerRequirements!: Prisma.JsonValue;
+  media!: Prisma.JsonValue;
+  estimatedTime!: string;
   maxTimeIncluded!: number | null;
   isActive!: boolean;
   createdAt!: Date;
@@ -35,7 +41,7 @@ export class AdminServiceVersionDto {
     dto.requiredTools = version.requiredTools;
     dto.customerRequirements = version.customerRequirements;
     dto.media = version.media;
-    dto.estimatedTime = version.estimatedTime ?? null;
+    dto.estimatedTime = version.estimatedTime;
     dto.maxTimeIncluded = version.maxTimeIncluded ?? null;
     dto.isActive = version.isActive;
     dto.createdAt = version.createdAt;
@@ -60,10 +66,7 @@ export class AdminServiceTemplateDto {
   latestVersion!: AdminServiceVersionDto | null;
 
   static fromEntity(
-    template: ServiceTemplate & {
-      versions: ServiceTemplateVersion[];
-      category: Category;
-    },
+    template: AdminServiceTemplateWithRelations,
   ): AdminServiceTemplateDto {
     const dto = new AdminServiceTemplateDto();
     dto.id = template.id;
@@ -72,9 +75,10 @@ export class AdminServiceTemplateDto {
     dto.name = template.name;
     dto.slug = template.slug;
     dto.description = template.description ?? null;
-    dto.medianPrice = template.medianPrice
-      ? Number(template.medianPrice)
-      : null;
+    dto.medianPrice =
+      template.medianPrice === null
+        ? null
+        : template.medianPrice.toNumber();
     dto.authorId = template.authorId ?? null;
     dto.keeperId = template.keeperId ?? null;
     dto.createdAt = template.createdAt;
