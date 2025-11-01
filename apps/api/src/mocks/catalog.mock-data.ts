@@ -65,6 +65,8 @@ const NOVOSIBIRSK_PROVIDERS: ServiceProviderDto[] = [
       'Опыт более 10 лет. Диагностика электропроводки в квартирах и коттеджах, подробный отчет о состоянии линий.',
     price: 2500,
     city: NOVOSIBIRSK_CITY,
+    hourlyRate: 1200,
+    estimatedTime: '1,5 часа',
   },
   {
     id: 'provider-petrov',
@@ -73,6 +75,8 @@ const NOVOSIBIRSK_PROVIDERS: ServiceProviderDto[] = [
       'Диагностика электросетей с выдачей технического заключения и рекомендациями по ремонту.',
     price: 3200,
     city: NOVOSIBIRSK_CITY,
+    hourlyRate: 1500,
+    estimatedTime: '2 часа',
   },
 ];
 
