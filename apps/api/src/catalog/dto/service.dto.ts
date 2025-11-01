@@ -14,6 +14,7 @@ export class ServiceVersionDto {
   customerRequirements: Prisma.JsonValue;
   media: Prisma.JsonValue;
   estimatedTime: string | null;
+  maxTimeIncluded: number | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -27,6 +28,8 @@ export class ServiceSummaryDto {
   latestVersion: ServiceVersionDto | null;
   slug: string;
   medianPrice: number | null;
+  estimatedTime: string | null;
+  maxTimeIncluded: number | null;
 }
 
 export class ServiceProviderDto {

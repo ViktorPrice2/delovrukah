@@ -149,6 +149,16 @@ function normalizeServiceVersion(version: ServiceVersion | null | undefined): Se
   const unitOfMeasure = typeof version.unitOfMeasure === "string" ? version.unitOfMeasure.trim() : null;
   const estimatedTime =
     typeof version.estimatedTime === "string" ? version.estimatedTime.trim() : null;
+  const maxTimeIncludedValue =
+    typeof version.maxTimeIncluded === "number"
+      ? version.maxTimeIncluded
+      : typeof version.maxTimeIncluded === "string"
+      ? Number.parseFloat(version.maxTimeIncluded)
+      : null;
+  const maxTimeIncluded =
+    typeof maxTimeIncludedValue === "number" && !Number.isNaN(maxTimeIncludedValue)
+      ? maxTimeIncludedValue
+      : null;
 
   return {
     ...version,
@@ -160,13 +170,29 @@ function normalizeServiceVersion(version: ServiceVersion | null | undefined): Se
     customerRequirements: normalizeStringArray(version.customerRequirements),
     media: normalizeMedia(version.media, version.title),
     estimatedTime: estimatedTime && estimatedTime.length > 0 ? estimatedTime : null,
+    maxTimeIncluded,
   };
 }
 
 function normalizeServiceDetail(service: ServiceDetail): ServiceDetail {
+  const estimatedTime =
+    typeof service.estimatedTime === "string" ? service.estimatedTime.trim() : null;
+  const maxTimeIncludedValue =
+    typeof service.maxTimeIncluded === "number"
+      ? service.maxTimeIncluded
+      : typeof service.maxTimeIncluded === "string"
+      ? Number.parseFloat(service.maxTimeIncluded)
+      : null;
+  const maxTimeIncluded =
+    typeof maxTimeIncludedValue === "number" && !Number.isNaN(maxTimeIncludedValue)
+      ? maxTimeIncludedValue
+      : null;
+
   return {
     ...service,
     description: service.description ?? null,
+    estimatedTime: estimatedTime && estimatedTime.length > 0 ? estimatedTime : null,
+    maxTimeIncluded,
     latestVersion: normalizeServiceVersion(service.latestVersion),
     providers: service.providers?.map((provider) => ({
       ...provider,

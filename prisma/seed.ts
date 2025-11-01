@@ -22,7 +22,8 @@ type SeedServiceVersion = {
   customerRequirements: Prisma.InputJsonValue;
   isActive?: boolean;
   media?: Prisma.InputJsonValue;
-  estimatedTime?: string | null;
+  estimatedTime: string;
+  maxTimeIncluded?: number | null;
 };
 
 type SeedServiceTemplate = {
@@ -187,6 +188,7 @@ const categories: SeedCategory[] = [
               MEDIA_GALLERIES.mixerBasic,
             ),
             estimatedTime: '1.5 часа',
+            maxTimeIncluded: 2,
           },
           {
             versionNumber: 2,
@@ -221,6 +223,7 @@ const categories: SeedCategory[] = [
               MEDIA_GALLERIES.mixerAdvanced,
             ),
             estimatedTime: '2 часа',
+            maxTimeIncluded: 2.5,
           },
         ],
       },
@@ -256,6 +259,7 @@ const categories: SeedCategory[] = [
             ],
             media: buildMediaSet('Промывка сифона', MEDIA_GALLERIES.siphonCleaning),
             estimatedTime: '45 минут',
+            maxTimeIncluded: 1,
           },
         ],
       },
@@ -300,6 +304,7 @@ const categories: SeedCategory[] = [
               MEDIA_GALLERIES.outletInstallation,
             ),
             estimatedTime: '1 час',
+            maxTimeIncluded: 1.5,
           },
         ],
       },
@@ -337,6 +342,7 @@ const categories: SeedCategory[] = [
             ],
             media: buildMediaSet('Первичная диагностика электропроводки', MEDIA_GALLERIES.wiringDiagnostics),
             estimatedTime: '2 часа',
+            maxTimeIncluded: 2,
           },
           {
             versionNumber: 2,
@@ -367,6 +373,7 @@ const categories: SeedCategory[] = [
             ],
             media: buildMediaSet('Расширенная диагностика электропроводки', MEDIA_GALLERIES.wiringAdvanced),
             estimatedTime: '3.5 часа',
+            maxTimeIncluded: 4,
           },
         ],
       },
@@ -409,6 +416,7 @@ const categories: SeedCategory[] = [
             ],
             media: buildMediaSet('Покраска стен в один слой', MEDIA_GALLERIES.wallPainting),
             estimatedTime: '6 часов',
+            maxTimeIncluded: 6,
           },
         ],
       },
@@ -445,6 +453,7 @@ const categories: SeedCategory[] = [
             ],
             media: buildMediaSet('Базовая укладка плитки', MEDIA_GALLERIES.tileLaying),
             estimatedTime: '8 часов',
+            maxTimeIncluded: 8,
           },
         ],
       },
@@ -490,6 +499,7 @@ const categories: SeedCategory[] = [
                   MEDIA_GALLERIES.acInstallation,
                 ),
                 estimatedTime: '4 часа',
+                maxTimeIncluded: 4,
             },
         ],
       },
@@ -525,6 +535,7 @@ const categories: SeedCategory[] = [
             ],
             media: buildMediaSet('Сезонная чистка кондиционера', MEDIA_GALLERIES.acCleaning),
             estimatedTime: '2 часа',
+            maxTimeIncluded: 2,
           },
         ],
       },
@@ -560,6 +571,7 @@ const categories: SeedCategory[] = [
             ],
             media: buildMediaSet('Пуско-наладка котла', MEDIA_GALLERIES.boilerSetup),
             estimatedTime: '3 часа',
+            maxTimeIncluded: 3,
           },
         ],
       },
@@ -752,7 +764,8 @@ async function seedCatalog(authorId: string) {
             media:
               versionData.media ??
               buildMediaSet(versionData.title, FALLBACK_MEDIA_GALLERY),
-            estimatedTime: versionData.estimatedTime ?? null,
+            estimatedTime: versionData.estimatedTime,
+            maxTimeIncluded: versionData.maxTimeIncluded ?? null,
             isActive,
           },
           create: {
@@ -768,7 +781,8 @@ async function seedCatalog(authorId: string) {
             media:
               versionData.media ??
               buildMediaSet(versionData.title, FALLBACK_MEDIA_GALLERY),
-            estimatedTime: versionData.estimatedTime ?? null,
+            estimatedTime: versionData.estimatedTime,
+            maxTimeIncluded: versionData.maxTimeIncluded ?? null,
             isActive,
           },
         });

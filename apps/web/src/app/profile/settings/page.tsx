@@ -230,7 +230,7 @@ export default function ProviderSettingsPage() {
             </div>
             <div className="space-y-2">
               <label className="block text-sm font-medium text-slate-700" htmlFor="hourlyRate">
-                Моя почасовая ставка, ₽/час
+                Моя почасовая ставка за доп. работы, ₽/час
               </label>
               <input
                 id="hourlyRate"

@@ -48,14 +48,14 @@ const ELECTRICAL_SERVICE_VERSION: ServiceVersion = {
     },
   ],
   estimatedTime: "2 часа",
+  maxTimeIncluded: 2,
   isActive: true,
   createdAt: "2024-01-10T10:00:00.000Z",
   updatedAt: "2024-01-10T10:00:00.000Z",
 };
 
 const NOVOSIBIRSK_PROVIDER_PROFILES: Array<
-  Pick<Provider, "id" | "displayName" | "description" | "price"> & {
-    hourlyRate?: number;
+  Pick<Provider, "id" | "displayName" | "description" | "price" | "hourlyRate"> & {
     estimatedTime?: string | null;
   }
 > = [
@@ -239,6 +239,8 @@ const ELECTRICAL_SERVICE: ServiceDetail = {
     "Полная диагностика электропроводки в жилых и коммерческих помещениях с рекомендациями по устранению неисправностей.",
   categoryId: ELECTRICAL_CATEGORY.id,
   latestVersion: ELECTRICAL_SERVICE_VERSION,
+  estimatedTime: "2 часа",
+  maxTimeIncluded: 2,
   authorId: null,
   keeperId: null,
   medianPrice: null,
@@ -287,6 +289,7 @@ function cloneVersion(version: ServiceVersion | null): ServiceVersion | null {
     customerRequirements: cloneJsonValue(version.customerRequirements),
     media: cloneJsonValue(version.media),
     estimatedTime: version.estimatedTime ?? null,
+    maxTimeIncluded: version.maxTimeIncluded ?? null,
   };
 }
 
@@ -302,6 +305,8 @@ function cloneService(service: ServiceDetail): ServiceDetail {
     ...service,
     latestVersion: cloneVersion(service.latestVersion),
     category: cloneCategory(service.category),
+    estimatedTime: service.estimatedTime ?? null,
+    maxTimeIncluded: service.maxTimeIncluded ?? null,
     providers: service.providers?.map(cloneProvider),
   };
 }

@@ -52,6 +52,7 @@ const ELECTRICAL_SERVICE_VERSION: ServiceVersionDto = {
     },
   ],
   estimatedTime: '2 часа',
+  maxTimeIncluded: 2,
   isActive: true,
   createdAt: new Date('2024-01-10T10:00:00.000Z'),
   updatedAt: new Date('2024-01-10T10:00:00.000Z'),
@@ -64,6 +65,7 @@ const NOVOSIBIRSK_PROVIDERS: ServiceProviderDto[] = [
     description:
       'Опыт более 10 лет. Диагностика электропроводки в квартирах и коттеджах, подробный отчет о состоянии линий.',
     price: 2500,
+    hourlyRate: 1800,
     city: NOVOSIBIRSK_CITY,
   },
   {
@@ -72,6 +74,7 @@ const NOVOSIBIRSK_PROVIDERS: ServiceProviderDto[] = [
     description:
       'Диагностика электросетей с выдачей технического заключения и рекомендациями по ремонту.',
     price: 3200,
+    hourlyRate: 2100,
     city: NOVOSIBIRSK_CITY,
   },
 ];
@@ -84,6 +87,8 @@ const ELECTRICAL_SERVICE: ServiceDetailDto = {
     'Полная диагностика электропроводки в жилых и коммерческих помещениях с рекомендациями по устранению неисправностей.',
   categoryId: ELECTRICAL_CATEGORY.id,
   latestVersion: ELECTRICAL_SERVICE_VERSION,
+  estimatedTime: '2 часа',
+  maxTimeIncluded: 2,
   authorId: null,
   keeperId: null,
   category: ELECTRICAL_CATEGORY,
@@ -136,6 +141,7 @@ function cloneVersion(
     customerRequirements: cloneJsonValue(version.customerRequirements),
     media: cloneJsonValue(version.media),
     estimatedTime: version.estimatedTime ?? null,
+    maxTimeIncluded: version.maxTimeIncluded ?? null,
     createdAt: new Date(version.createdAt),
     updatedAt: new Date(version.updatedAt),
   };
@@ -144,6 +150,7 @@ function cloneVersion(
 function cloneProvider(provider: ServiceProviderDto): ServiceProviderDto {
   return {
     ...provider,
+    hourlyRate: provider.hourlyRate ?? null,
     city: cloneCity(provider.city),
   };
 }
@@ -153,6 +160,8 @@ function cloneService(service: ServiceDetailDto): ServiceDetailDto {
     ...service,
     latestVersion: cloneVersion(service.latestVersion),
     category: cloneCategory(service.category),
+    estimatedTime: service.estimatedTime ?? null,
+    maxTimeIncluded: service.maxTimeIncluded ?? null,
     providers: service.providers?.map(cloneProvider),
   };
 }
@@ -188,6 +197,8 @@ function createSummary(service: ServiceDetailDto): ServiceSummaryDto {
     slug: service.slug,
     latestVersion: cloneVersion(service.latestVersion),
     medianPrice: service.medianPrice ?? null,
+    estimatedTime: service.estimatedTime ?? null,
+    maxTimeIncluded: service.maxTimeIncluded ?? null,
   };
 }
 

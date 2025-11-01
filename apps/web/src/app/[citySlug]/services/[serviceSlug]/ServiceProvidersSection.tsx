@@ -66,8 +66,8 @@ function getPriorityMetrics(
   serviceEstimatedTime: string | null,
 ): Record<PriorityKey, number> {
   const estimatedTimeMinutes =
-    parseEstimatedTimeToMinutes(provider.estimatedTime) ??
     parseEstimatedTimeToMinutes(serviceEstimatedTime) ??
+    parseEstimatedTimeToMinutes(provider.estimatedTime) ??
     Number.POSITIVE_INFINITY;
   const quality = getRating(provider.id).rating * 10;
   const price = provider.price;
@@ -151,7 +151,8 @@ function ProviderCard({ provider, service }: ProviderCardProps) {
   const meta = useMemo(() => getRating(provider.id), [provider.id]);
   const badges = useMemo(() => getBadges(provider.id), [provider.id]);
   const availability = useMemo(() => getAvailability(provider.id), [provider.id]);
-  const estimatedTimeLabel = provider.estimatedTime ?? service.latestVersion?.estimatedTime ?? null;
+  const estimatedTimeLabel =
+    provider.estimatedTime ?? service.estimatedTime ?? service.latestVersion?.estimatedTime ?? null;
 
   return (
     <li className="group rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md">
@@ -189,7 +190,7 @@ function ProviderCard({ provider, service }: ProviderCardProps) {
             {service.latestVersion?.unitOfMeasure ? (
               <span className="text-xs text-slate-500">за {service.latestVersion.unitOfMeasure.toLowerCase()}</span>
             ) : null}
-            {provider.hourlyRate !== null ? (
+            {provider.hourlyRate != null ? (
               <span className="text-xs text-slate-500">
                 Доп. работы: {provider.hourlyRate.toLocaleString('ru-RU')} ₽/час
               </span>
@@ -256,7 +257,7 @@ export function ServiceProvidersSection({ providers, service, cityName }: Provid
   const [selectedPriorities, setSelectedPriorities] = useState<PriorityKey[]>(['quality', 'price']);
   const [currentPage, setCurrentPage] = useState(1);
   const hasProviders = providers.length > 0;
-  const serviceEstimatedTime = service.latestVersion?.estimatedTime ?? null;
+  const serviceEstimatedTime = service.estimatedTime ?? service.latestVersion?.estimatedTime ?? null;
 
   const priorityTags = PRIORITY_TAGS;
 
