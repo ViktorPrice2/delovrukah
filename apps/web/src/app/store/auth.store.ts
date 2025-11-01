@@ -27,6 +27,14 @@ interface AuthState {
 }
 
 // 2. Создаем store с исправленной логикой
+const syncAxiosAuthHeader = (token: string | undefined) => {
+  if (token && token.trim().length > 0) {
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common.Authorization;
+  }
+};
+
 export const useAuth = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -34,12 +42,14 @@ export const useAuth = create<AuthState>()(
       token: undefined,
       isLoading: true, // <--- НАЧАЛЬНОЕ СОСТОЯНИЕ - ЗАГРУЗКА
       login: (data) => {
+        syncAxiosAuthHeader(data.token);
         set({ user: data.user, token: data.token, isLoading: false });
         void useNotificationsStore.getState().fetchNotifications();
       },
 
       logout: () => {
         useNotificationsStore.getState().clear();
+        syncAxiosAuthHeader(undefined);
         set({ user: undefined, token: undefined });
       },
 
@@ -92,4 +102,13 @@ export const useAuth = create<AuthState>()(
       partialize: (state) => ({ token: state.token }),
     }
   )
+);
+
+syncAxiosAuthHeader(useAuth.getState().token);
+
+useAuth.subscribe(
+  (state) => state.token,
+  (token) => {
+    syncAxiosAuthHeader(token);
+  },
 );
