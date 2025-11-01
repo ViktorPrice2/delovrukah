@@ -1140,6 +1140,15 @@ main()
     await prisma.$disconnect();
   })
   .catch(async (e) => {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2021') {
+      console.error(
+        'Prisma сообщает, что таблица отсутствует (ошибка P2021). '
+          + 'Сначала нужно применить все миграции: \n'
+          + '  pnpm prisma migrate deploy\n'
+          + 'После успешного применения миграций запустите сидер ещё раз.'
+      );
+    }
+
     console.error('An error occurred during seeding:', e);
     await prisma.$disconnect();
     process.exit(1);
