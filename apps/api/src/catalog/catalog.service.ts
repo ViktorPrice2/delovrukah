@@ -196,7 +196,9 @@ export class CatalogService {
             return this.mapServiceProvider(
               price.providerProfile as ProviderProfile & { city: City },
               price.price,
-              price.serviceTemplateVersion?.estimatedTime ?? null,
+              price.serviceTemplateVersion?.estimatedTime ??
+                latestVersion?.estimatedTime ??
+                null,
             );
           })
           .filter(
@@ -245,6 +247,8 @@ export class CatalogService {
       description: service.description,
       latestVersion: this.mapVersion(latestVersion),
       medianPrice: service.medianPrice?.toNumber() ?? null,
+      estimatedTime: latestVersion?.estimatedTime ?? null,
+      maxTimeIncluded: latestVersion?.maxTimeIncluded ?? null,
     };
   }
 
@@ -267,6 +271,7 @@ export class CatalogService {
       customerRequirements: version.customerRequirements,
       media: version.media,
       estimatedTime: version.estimatedTime ?? null,
+      maxTimeIncluded: version.maxTimeIncluded ?? null,
       isActive: version.isActive,
       createdAt: version.createdAt,
       updatedAt: version.updatedAt,

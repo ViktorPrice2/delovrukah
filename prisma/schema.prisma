@@ -120,7 +120,8 @@ model ServiceTemplateVersion {
   requiredTools        Json
   customerRequirements Json
   media                Json
-  estimatedTime        String?
+  estimatedTime        String
+  maxTimeIncluded      Float?
   isActive             Boolean         @default(true)
   serviceTemplate      ServiceTemplate @relation(fields: [serviceTemplateId], references: [id], onDelete: Cascade)
   prices               Price[]

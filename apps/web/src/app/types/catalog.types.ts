@@ -50,6 +50,7 @@ export interface ServiceVersion {
   customerRequirements: string[] | null;
   media: ServiceMediaItem[] | null;
   estimatedTime: string | null;
+  maxTimeIncluded: number | null;
   isActive: boolean;
   createdAt: string; // Даты приходят как строки в JSON
   updatedAt: string;
@@ -70,6 +71,8 @@ export interface ServiceSummary {
   categoryId: string;
   latestVersion: ServiceVersion | null;
   medianPrice: number | null;
+  estimatedTime: string | null;
+  maxTimeIncluded: number | null;
 }
 
 /**

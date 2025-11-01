@@ -25,6 +25,20 @@ function formatPrice(price: number | null): string {
   return `от ${price.toLocaleString("ru-RU")} ₽`;
 }
 
+function formatHours(value: number | null | undefined, options?: { maximumFractionDigits?: number }): string {
+  if (typeof value !== "number" || Number.isNaN(value) || !Number.isFinite(value)) {
+    return "Уточняется";
+  }
+
+  const fractionDigits = options?.maximumFractionDigits ?? (Number.isInteger(value) ? 0 : 1);
+  const normalized = value.toLocaleString("ru-RU", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: fractionDigits,
+  });
+
+  return normalized;
+}
+
 function getPrimaryMedia(media: ServiceMediaItem[] | null): ServiceMediaItem | null {
   if (!media || media.length === 0) {
     return null;
@@ -171,7 +185,19 @@ export default async function ServicePage({ params, searchParams }: ServicePageP
   const customerRequirements = latestVersion?.customerRequirements ?? null;
   const unitOfMeasure = latestVersion?.unitOfMeasure ?? null;
   const versionDescription = latestVersion?.description ?? null;
-  const estimatedTime = latestVersion?.estimatedTime ?? null;
+  const normalizedEstimatedTime =
+    service.estimatedTime?.trim() ?? latestVersion?.estimatedTime?.trim() ?? null;
+  const estimatedTimeTagValue = normalizedEstimatedTime
+    ? normalizedEstimatedTime.startsWith("~")
+      ? normalizedEstimatedTime
+      : `~ ${normalizedEstimatedTime}`
+    : "Уточняется";
+  const estimatedTime = normalizedEstimatedTime;
+  const maxTimeIncluded = service.maxTimeIncluded ?? latestVersion?.maxTimeIncluded ?? null;
+  const maxTimeIncludedSentence =
+    typeof maxTimeIncluded === "number" && !Number.isNaN(maxTimeIncluded)
+      ? `В стоимость включено до ${formatHours(maxTimeIncluded)} часов работы`
+      : "В стоимость включено время обсуждается с мастером";
   const media = latestVersion?.media ?? null;
   const primaryMedia = getPrimaryMedia(media);
   const secondaryMedia = getSecondaryMedia(media);
@@ -252,9 +278,12 @@ export default async function ServicePage({ params, searchParams }: ServicePageP
       title: "Важная информация",
       description: "Ключевые параметры услуги",
       content: (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <InfoBadge label="Единица измерения" value={unitOfMeasure ?? "Уточняется"} />
-          <InfoBadge label="Оценочное время" value={estimatedTime ?? "Уточняется"} />
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <InfoBadge label="Единица измерения" value={unitOfMeasure ?? "Уточняется"} />
+            <InfoBadge label="Оценочное время" value={estimatedTime ?? "Уточняется"} />
+          </div>
+          <p className="text-sm text-slate-600">{maxTimeIncludedSentence}</p>
         </div>
       ),
     },
@@ -263,19 +292,9 @@ export default async function ServicePage({ params, searchParams }: ServicePageP
   const aiSummary = getAiSummary(service.description ?? versionDescription);
   const smartTags = [
     {
-      id: "price",
-      label: "Стоимость",
-      value: formatPrice(minPrice),
-    },
-    {
       id: "time",
-      label: "Время",
-      value: estimatedTime ?? "Уточняется",
-    },
-    {
-      id: "uom",
-      label: "Единица",
-      value: unitOfMeasure ?? "Уточняется",
+      label: "Оценка времени",
+      value: estimatedTimeTagValue,
     },
   ];
 
