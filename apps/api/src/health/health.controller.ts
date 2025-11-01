@@ -15,7 +15,9 @@ export class HealthController {
 
   @Get()
   getHealth(): HealthCheckResponse {
-    const databaseStatus = this.prismaService.isDatabaseAvailable ? 'up' : 'down';
+    const databaseStatus = this.prismaService.isDatabaseAvailable
+      ? 'up'
+      : 'down';
 
     return {
       status: 'ok',

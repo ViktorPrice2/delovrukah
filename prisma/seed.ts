@@ -1115,6 +1115,20 @@ async function main() {
   console.log('PostGIS extension ensured.');
   console.log('Starting seed...');
 
+  const adminUser = await prisma.user.upsert({
+    where: { email: 'admin@delovrukah.ru' },
+    update: {
+      role: Role.ADMIN,
+      passwordHash: 'seeded-hash',
+    },
+    create: {
+      email: 'admin@delovrukah.ru',
+      passwordHash: 'seeded-hash',
+      role: Role.ADMIN,
+    },
+  });
+  console.log(`Admin user ready: ${adminUser.email}`);
+
   const author = await prisma.user.upsert({
     where: { email: 'catalog-author@example.com' },
     update: {
