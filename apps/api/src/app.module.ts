@@ -10,6 +10,7 @@ import { ProviderModule } from './provider/provider.module';
 import { OrdersModule } from './orders/orders.module';
 import { ChatModule } from './chat/chat.module';
 import { HealthModule } from './health/health.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { HealthModule } from './health/health.module';
     OrdersModule,
     ChatModule,
     HealthModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

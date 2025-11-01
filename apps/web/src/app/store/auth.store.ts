@@ -4,16 +4,18 @@ import { api } from '@/lib/api';
 import { useNotificationsStore } from './notifications.store';
 
 // 1. Определяем типы
+type SupportedRole = 'CUSTOMER' | 'PROVIDER' | 'ADMIN';
+
 interface AuthUser {
   id: string;
   email: string;
-  role: 'CUSTOMER' | 'PROVIDER';
+  role: SupportedRole;
 }
 
 interface AuthMeResponse {
   sub: string;
   email: string;
-  role: 'CUSTOMER' | 'PROVIDER';
+  role: SupportedRole;
 }
 
 interface AuthState {

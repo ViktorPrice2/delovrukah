@@ -4,10 +4,7 @@ import * as request from 'supertest';
 import { CatalogController } from './catalog.controller';
 import { CatalogService } from './catalog.service';
 import { CategoryDto } from './dto/category.dto';
-import {
-  ServiceDetailDto,
-  ServiceSummaryDto,
-} from './dto/service.dto';
+import { ServiceDetailDto, ServiceSummaryDto } from './dto/service.dto';
 
 describe('CatalogController (integration)', () => {
   let app: INestApplication;
@@ -51,9 +48,7 @@ describe('CatalogController (integration)', () => {
   const catalogServiceMock = {
     getCategories: jest.fn().mockResolvedValue(categoryList),
     getServicesByCategory: jest.fn().mockResolvedValue(serviceSummaries),
-    getServicesByCategorySlug: jest
-      .fn()
-      .mockResolvedValue([serviceDetail]),
+    getServicesByCategorySlug: jest.fn().mockResolvedValue([serviceDetail]),
     getServiceBySlugOrId: jest.fn().mockResolvedValue(serviceDetail),
   } satisfies Record<string, jest.Mock>;
 

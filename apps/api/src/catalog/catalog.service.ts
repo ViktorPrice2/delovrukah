@@ -249,9 +249,11 @@ export class CatalogService {
       medianPrice: service.medianPrice?.toNumber() ?? null,
       estimatedTime: latestVersion?.estimatedTime ?? null,
       maxTimeIncluded: this.getMaxTimeIncluded(
-        latestVersion as (ServiceTemplateVersion & {
-          maxTimeIncluded?: number | null;
-        }) | null,
+        latestVersion as
+          | (ServiceTemplateVersion & {
+              maxTimeIncluded?: number | null;
+            })
+          | null,
       ),
     };
   }
@@ -287,9 +289,11 @@ export class CatalogService {
   }
 
   private getMaxTimeIncluded(
-    version: (ServiceTemplateVersion & {
-      maxTimeIncluded?: number | null;
-    }) | null,
+    version:
+      | (ServiceTemplateVersion & {
+          maxTimeIncluded?: number | null;
+        })
+      | null,
   ): number | null {
     if (!version) {
       return null;

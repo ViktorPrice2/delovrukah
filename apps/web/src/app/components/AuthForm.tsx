@@ -124,7 +124,7 @@ export function AuthForm({
       const decodedToken: {
         sub: string;
         email: string;
-        role: 'CUSTOMER' | 'PROVIDER';
+        role: 'CUSTOMER' | 'PROVIDER' | 'ADMIN';
       } = jwtDecode(token);
 
       // Вызываем действие `login` из нашего Zustand store
@@ -139,7 +139,11 @@ export function AuthForm({
 
       // Перенаправляем пользователя на страницу в зависимости от роли
       const redirectPath =
-        decodedToken.role === 'PROVIDER' ? '/profile' : '/orders';
+        decodedToken.role === 'PROVIDER'
+          ? '/profile'
+          : decodedToken.role === 'ADMIN'
+            ? '/admin'
+            : '/orders';
       router.push(redirectPath);
 
     } catch (error) {
