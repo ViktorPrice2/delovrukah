@@ -7,6 +7,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Prisma } from '@prisma/client';
 
 export class CreateServiceVersionDto {
   @IsString()
@@ -37,17 +38,16 @@ export class CreateServiceVersionDto {
   @IsString({ each: true })
   customerRequirements!: string[];
 
-  @IsOptional()
   @IsString()
-  estimatedTime?: string;
+  @IsNotEmpty()
+  estimatedTime!: string;
 
   @IsOptional()
   @IsNumber()
   maxTimeIncluded?: number | null;
 
   @IsOptional()
-  @IsArray()
-  media?: unknown[];
+  media?: Prisma.JsonValue | null;
 }
 
 export class CreateServiceDto {
