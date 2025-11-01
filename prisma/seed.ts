@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt';
 import { Prisma, PrismaClient, Role } from '@prisma/client';
 import { slugify } from 'transliteration';
 
@@ -6,6 +7,8 @@ const prisma = new PrismaClient();
 const PRICES_PER_PROVIDER_RATIO = 0.5;
 const SERVICES_PER_PROVIDER_MIN = 3;
 const SERVICES_PER_PROVIDER_MAX = 5;
+
+const adminPassword = 'password123';
 
 function generateSlug(text: string): string {
   return slugify(text, { lowercase: true, separator: '-' });
@@ -993,6 +996,7 @@ async function setProviderHomeLocation(
 async function seedProviders(
   cityMap: Record<string, { id: string; range: CoordinateRange }>,
   activeVersions: ActiveServiceVersion[],
+  hashedPassword: string,
 ) {
   const providerCountWithPrices = Math.round(
     providerSeeds.length * PRICES_PER_PROVIDER_RATIO,
@@ -1018,7 +1022,7 @@ async function seedProviders(
       },
       create: {
         email: providerData.email,
-        passwordHash: 'seeded-hash',
+        passwordHash: hashedPassword,
         role: Role.PROVIDER,
       },
     });
@@ -1083,7 +1087,7 @@ async function seedProviders(
   }
 }
 
-async function seedCustomers() {
+async function seedCustomers(hashedPassword: string) {
   for (const customer of customerSeeds) {
     const user = await prisma.user.upsert({
       where: { email: customer.email },
@@ -1092,7 +1096,7 @@ async function seedCustomers() {
       },
       create: {
         email: customer.email,
-        passwordHash: 'seeded-hash',
+        passwordHash: hashedPassword,
         role: Role.CUSTOMER,
       },
     });
@@ -1115,15 +1119,17 @@ async function main() {
   console.log('PostGIS extension ensured.');
   console.log('Starting seed...');
 
+  const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@delovrukah.ru' },
     update: {
       role: Role.ADMIN,
-      passwordHash: 'seeded-hash',
+      passwordHash: hashedPassword,
     },
     create: {
       email: 'admin@delovrukah.ru',
-      passwordHash: 'seeded-hash',
+      passwordHash: hashedPassword,
       role: Role.ADMIN,
     },
   });
@@ -1136,15 +1142,15 @@ async function main() {
     },
     create: {
       email: 'catalog-author@example.com',
-      passwordHash: 'seeded-hash',
+      passwordHash: hashedPassword,
       role: Role.PROVIDER,
     },
   });
 
   const cityMap = await seedCities();
   const activeVersions = await seedCatalog(author.id);
-  await seedProviders(cityMap, activeVersions);
-  await seedCustomers();
+  await seedProviders(cityMap, activeVersions, hashedPassword);
+  await seedCustomers(hashedPassword);
 
   console.log('Seed finished.');
 }
