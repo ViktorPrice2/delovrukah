@@ -248,7 +248,11 @@ export class CatalogService {
       latestVersion: this.mapVersion(latestVersion),
       medianPrice: service.medianPrice?.toNumber() ?? null,
       estimatedTime: latestVersion?.estimatedTime ?? null,
-      maxTimeIncluded: latestVersion?.maxTimeIncluded ?? null,
+      maxTimeIncluded: this.getMaxTimeIncluded(
+        latestVersion as (ServiceTemplateVersion & {
+          maxTimeIncluded?: number | null;
+        }) | null,
+      ),
     };
   }
 
@@ -258,6 +262,10 @@ export class CatalogService {
     if (!version) {
       return null;
     }
+
+    const versionWithMaxTime = version as ServiceTemplateVersion & {
+      maxTimeIncluded?: number | null;
+    };
 
     return {
       id: version.id,
@@ -271,11 +279,34 @@ export class CatalogService {
       customerRequirements: version.customerRequirements,
       media: version.media,
       estimatedTime: version.estimatedTime ?? null,
-      maxTimeIncluded: version.maxTimeIncluded ?? null,
+      maxTimeIncluded: this.getMaxTimeIncluded(versionWithMaxTime),
       isActive: version.isActive,
       createdAt: version.createdAt,
       updatedAt: version.updatedAt,
     };
+  }
+
+  private getMaxTimeIncluded(
+    version: (ServiceTemplateVersion & {
+      maxTimeIncluded?: number | null;
+    }) | null,
+  ): number | null {
+    if (!version) {
+      return null;
+    }
+
+    const rawValue = version.maxTimeIncluded;
+
+    if (typeof rawValue === 'number') {
+      return rawValue;
+    }
+
+    if (typeof rawValue === 'string') {
+      const parsed = Number.parseFloat(rawValue);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    return null;
   }
 
   async updateMedianPrice(serviceTemplateId: string): Promise<void> {
