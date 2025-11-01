@@ -1,15 +1,15 @@
 import { Prisma, PrismaClient, Role } from '@prisma/client';
-import { slugify } from 'transliteration'; // Установим эту библиотеку
+import { slugify } from 'transliteration';
 
 const prisma = new PrismaClient();
 
-// --- НОВАЯ ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ---
+const PRICES_PER_PROVIDER_RATIO = 0.5;
+const SERVICES_PER_PROVIDER_MIN = 3;
+const SERVICES_PER_PROVIDER_MAX = 5;
+
 function generateSlug(text: string): string {
-  // slugify из библиотеки transliteration отлично преобразует кириллицу
-  // "Установка Смесителя" -> "ustanovka-smesitelya"
   return slugify(text, { lowercase: true, separator: '-' });
 }
-// --- КОНЕЦ НОВОЙ ФУНКЦИИ ---
 
 type SeedServiceVersion = {
   versionNumber: number;
@@ -20,10 +20,9 @@ type SeedServiceVersion = {
   unitOfMeasure: string;
   requiredTools: Prisma.InputJsonValue;
   customerRequirements: Prisma.InputJsonValue;
-  isActive?: boolean;
-  media?: Prisma.InputJsonValue;
   estimatedTime: string;
   maxTimeIncluded?: number | null;
+  media?: Prisma.InputJsonValue;
 };
 
 type SeedServiceTemplate = {
@@ -49,19 +48,24 @@ type SeedCity = {
   range: CoordinateRange;
 };
 
-type SeedProviderService = {
-  categoryName: string;
-  serviceName: string;
-  price: number;
-};
-
 type SeedProvider = {
   email: string;
   displayName: string;
-  description?: string;
+  description: string;
   citySlug: string;
-  hourlyRate?: number;
-  services: SeedProviderService[];
+  hourlyRate: number;
+};
+
+type SeedCustomer = {
+  email: string;
+  fullName: string;
+};
+
+type ActiveServiceVersion = {
+  id: string;
+  serviceName: string;
+  categoryName: string;
+  title: string;
 };
 
 type SeedMediaItem = {
@@ -83,98 +87,103 @@ function buildMediaSet(title: string, urls: string[]): SeedMediaItem[] {
 }
 
 const MEDIA_GALLERIES = {
-  mixerBasic: [
+  mixerInstall: [
     'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
     'https://images.unsplash.com/photo-1581579186989-0f9ee7ea8f29',
     'https://images.unsplash.com/photo-1582719478141-44d23c4d49b2',
   ],
-  mixerAdvanced: [
-    'https://images.unsplash.com/photo-1560179707-f14e90ef3623',
-    'https://images.unsplash.com/photo-1582560475093-23b83109d9d3',
-    'https://images.unsplash.com/photo-1582719478181-bf6c1b1fefd1',
+  leakFix: [
+    'https://images.unsplash.com/photo-1503387762-592deb58ef4e',
+    'https://images.unsplash.com/photo-1519710164239-da123dc03ef4',
+    'https://images.unsplash.com/photo-1523240795612-9a054b0db644',
   ],
-  siphonCleaning: [
-    'https://images.unsplash.com/photo-1570129476769-dcb17c91f90e',
-    'https://images.unsplash.com/photo-1579546928687-0f9be64d0a3c',
-    'https://images.unsplash.com/photo-1581579186984-7f9d48f223e1',
+  towelDryer: [
+    'https://images.unsplash.com/photo-1597003634303-43c17ae9ca88',
+    'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e',
+    'https://images.unsplash.com/photo-1505692069463-1e4e8c1f3d44',
   ],
-  outletInstallation: [
+  outletInstall: [
     'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158',
     'https://images.unsplash.com/photo-1492724441997-5dc865305da7',
     'https://images.unsplash.com/photo-1582056619247-73f8ffa8fd2c',
   ],
-  wiringDiagnostics: [
-    'https://images.unsplash.com/photo-1582719478173-e5ff41e5974e',
-    'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85',
-    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
-  ],
-  wiringAdvanced: [
-    'https://images.unsplash.com/photo-1593011957406-898b9612b05d',
+  lightFixture: [
+    'https://images.unsplash.com/photo-1493666438817-866a91353ca9',
+    'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e',
     'https://images.unsplash.com/photo-1523419409543-0c1df022bdd1',
-    'https://images.unsplash.com/photo-1582719478141-44d23c4d49b2',
   ],
   wallPainting: [
     'https://images.unsplash.com/photo-1503387762-592deb58ef4e',
-    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
     'https://images.unsplash.com/photo-1523419409543-0c1df022bdd1',
+    'https://images.unsplash.com/photo-1565183997392-2e1f1a090e99',
   ],
   tileLaying: [
     'https://images.unsplash.com/photo-1523413651479-597eb2da0ad6',
     'https://images.unsplash.com/photo-1523779105320-d1cd346ff52c',
     'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac',
   ],
-  acInstallation: [
+  acInstall: [
     'https://images.unsplash.com/photo-1582719478131-d4f71c0d8af5',
-    'https://images.unsplash.com/photo-1523419409543-0c1df022bdd1',
-    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
+    'https://images.unsplash.com/photo-1560179707-f14e90ef3623',
+    'https://images.unsplash.com/photo-1545239351-1141bd82e8a6',
   ],
   acCleaning: [
-    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
-    'https://images.unsplash.com/photo-1581579186984-7f9d48f223e1',
     'https://images.unsplash.com/photo-1505691723518-36a1d8328535',
+    'https://images.unsplash.com/photo-1581579186984-7f9d48f223e1',
+    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
   ],
   boilerSetup: [
-    'https://images.unsplash.com/photo-1581579186989-0f9ee7ea8f29',
     'https://images.unsplash.com/photo-1582719478173-e5ff41e5974e',
+    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
     'https://images.unsplash.com/photo-1582056619247-73f8ffa8fd2c',
+  ],
+  deepCleaning: [
+    'https://images.unsplash.com/photo-1581579186984-7f9d48f223e1',
+    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
+    'https://images.unsplash.com/photo-1486592424980-45e4e0d04f24',
+  ],
+  windowWashing: [
+    'https://images.unsplash.com/photo-1487598273674-0f6c62f098f1',
+    'https://images.unsplash.com/photo-1487611459768-bd414656ea10',
+    'https://images.unsplash.com/photo-1505691723518-36a1d8328535',
   ],
 } satisfies Record<string, string[]>;
 
 const FALLBACK_MEDIA_GALLERY = [
-  'https://images.unsplash.com/photo-1582719478173-e5ff41e5974e',
-  'https://images.unsplash.com/photo-1503387762-592deb58ef4e',
+  'https://images.unsplash.com/photo-1523419409543-0c1df022bdd1',
   'https://images.unsplash.com/photo-1581579186989-0f9ee7ea8f29',
+  'https://images.unsplash.com/photo-1503387762-592deb58ef4e',
 ];
 
 const categories: SeedCategory[] = [
   {
     name: 'Сантехника',
-    description: 'Услуги по обслуживанию и ремонту водопровода и канализации.',
+    description: 'Услуги по обслуживанию, ремонту и модернизации сантехнических систем.',
     services: [
       {
         name: 'Установка смесителя',
-        description: 'Монтаж кухонного или ванного смесителя с проверкой подключения.',
+        description: 'Монтаж кухонного или ванного смесителя с проверкой герметичности.',
         versions: [
           {
             versionNumber: 1,
-            title: 'Базовая установка смесителя',
+            title: 'Комплексная установка смесителя',
             description:
-              'Включает демонтаж старого оборудования, монтаж и проверку герметичности.',
+              'Включает демонтаж старого оборудования, монтаж нового смесителя и проверку герметичности соединений.',
             whatsIncluded: [
               'Демонтаж старого смесителя',
               'Установка нового смесителя на готовые выводы воды',
-              'Подключение гибких подводок',
-              'Проверка герметичности соединений',
+              'Подключение гибких подводок и аэратора',
+              'Проверка герметичности соединений и регулировка напора',
             ],
             whatsNotIncluded: [
               'Прокладка новой трубной разводки',
               'Штробление стен и скрытая прокладка коммуникаций',
-              'Поставка расходных материалов',
+              'Поставка расходных материалов и самого смесителя',
             ],
             unitOfMeasure: 'шт',
             requiredTools: [
               'Газовый или разводной ключ',
-              'Фум-лента или герметик',
+              'Фум-лента и сантехнический герметик',
               'Отвертки крестовая и плоская',
             ],
             customerRequirements: [
@@ -182,84 +191,83 @@ const categories: SeedCategory[] = [
               'Исправные запорные краны на подводках',
               'Наличие нового смесителя и комплектующих',
             ],
-            isActive: false,
-            media: buildMediaSet(
-              'Базовая установка смесителя',
-              MEDIA_GALLERIES.mixerBasic,
-            ),
+            media: buildMediaSet('Комплексная установка смесителя', MEDIA_GALLERIES.mixerInstall),
             estimatedTime: '1.5 часа',
             maxTimeIncluded: 2,
-          },
-          {
-            versionNumber: 2,
-            title: 'Расширенная установка смесителя',
-            description:
-              'Дополнительно включает замену гибкой подводки и установку фильтров грубой очистки.',
-            whatsIncluded: [
-              'Все работы базовой установки',
-              'Замена гибкой подводки и прокладок',
-              'Установка фильтров грубой очистки на вводе',
-              'Контроль правильности давления и температуры воды',
-            ],
-            whatsNotIncluded: [
-              'Монтаж фильтров тонкой очистки',
-              'Выравнивание или шпаклевка стен',
-              'Устройство скрытых ревизионных люков',
-            ],
-            unitOfMeasure: 'шт',
-            requiredTools: [
-              'Набор гаечных ключей',
-              'Пресс-клещи для фитингов',
-              'Фум-лента и паста-герметик',
-              'Измерительные приборы для контроля давления',
-            ],
-            customerRequirements: [
-              'Подготовленные и доступные точки подключения',
-              'Предоставление фильтров и новых комплектующих',
-              'Возможность отключения стояка воды при необходимости',
-            ],
-            media: buildMediaSet(
-              'Расширенная установка смесителя',
-              MEDIA_GALLERIES.mixerAdvanced,
-            ),
-            estimatedTime: '2 часа',
-            maxTimeIncluded: 2.5,
           },
         ],
       },
       {
-        name: 'Чистка сифона',
-        description: 'Профилактическая чистка сифона и сливной системы.',
+        name: 'Ремонт протечки',
+        description: 'Локализация и устранение протечек в водопроводных системах.',
         versions: [
           {
             versionNumber: 1,
-            title: 'Промывка сифона',
-            description: 'Разбор сифона, чистка и проверка герметичности соединений.',
+            title: 'Локальный ремонт протечки',
+            description:
+              'Мастер диагностирует источник протечки и выполняет ремонт с заменой уплотнителей и фитингов.',
             whatsIncluded: [
-              'Диагностика причины засора',
-              'Демонтаж сифона и сливных трубок',
-              'Механическая и гидравлическая чистка деталей',
-              'Установка сифона и проверка на протечки',
+              'Диагностика причины протечки',
+              'Локальный демонтаж поврежденного участка',
+              'Замена уплотнителей и фитингов',
+              'Проверка герметичности под рабочим давлением',
             ],
             whatsNotIncluded: [
-              'Ремонт или замена канализационных стояков',
-              'Замена раковины или сантехнических приборов',
-              'Использование химических реагентов клиента',
+              'Полная замена трубопровода',
+              'Ремонт отделки стен и потолков после протечки',
+              'Вывоз строительного мусора',
+            ],
+            unitOfMeasure: 'выезд',
+            requiredTools: [
+              'Набор гаечных ключей',
+              'Пресс-клещи для фитингов',
+              'Измерительный прибор давления',
+            ],
+            customerRequirements: [
+              'Обеспечить доступ к трубопроводу',
+              'Сообщить о ранее проводимых ремонтах',
+              'Предоставить запчасти, если есть требования по бренду',
+            ],
+            media: buildMediaSet('Локальный ремонт протечки', MEDIA_GALLERIES.leakFix),
+            estimatedTime: '2 часа',
+            maxTimeIncluded: 3,
+          },
+        ],
+      },
+      {
+        name: 'Монтаж полотенцесушителя',
+        description: 'Установка водяного или электрического полотенцесушителя.',
+        versions: [
+          {
+            versionNumber: 1,
+            title: 'Монтаж полотенцесушителя «под ключ»',
+            description:
+              'Установка включает подключение к системе отопления или ГВС и контроль безопасности.',
+            whatsIncluded: [
+              'Демонтаж старого полотенцесушителя при необходимости',
+              'Разметка и установка креплений',
+              'Подключение к системе ГВС или отопления',
+              'Оппрессовка и проверка герметичности',
+            ],
+            whatsNotIncluded: [
+              'Изменение трассы трубопровода более 0.5 метра',
+              'Штробление стен и отделочные работы',
+              'Поставка полотенцесушителя и вентилей',
             ],
             unitOfMeasure: 'шт',
             requiredTools: [
-              'Набор отверток',
-              'Ёршик и гибкий трос',
-              'Ведро и тряпки для воды',
+              'Перфоратор и набор буров',
+              'Регулируемые ключи',
+              'Фум-лента и герметик',
             ],
             customerRequirements: [
-              'Освободить доступ к раковине или ванне',
-              'Обеспечить рабочее пространство для демонтажа',
-              'Предоставить информацию о предыдущих ремонтах',
+              'Освободить зону установки',
+              'Предоставить доступ к стоякам воды',
+              'Подготовить оборудование и комплектующие',
             ],
-            media: buildMediaSet('Промывка сифона', MEDIA_GALLERIES.siphonCleaning),
-            estimatedTime: '45 минут',
-            maxTimeIncluded: 1,
+            media: buildMediaSet('Монтаж полотенцесушителя', MEDIA_GALLERIES.towelDryer),
+            estimatedTime: '3 часа',
+            maxTimeIncluded: 4,
           },
         ],
       },
@@ -267,7 +275,7 @@ const categories: SeedCategory[] = [
   },
   {
     name: 'Электрика',
-    description: 'Работы по монтажу и обслуживанию электросетей.',
+    description: 'Работы по монтажу и обслуживанию электрических сетей и оборудования.',
     services: [
       {
         name: 'Установка розетки',
@@ -299,81 +307,46 @@ const categories: SeedCategory[] = [
               'Предоставить выбранную модель розетки',
               'Доступ к электрощитку',
             ],
-            media: buildMediaSet(
-              'Стандартная установка розетки',
-              MEDIA_GALLERIES.outletInstallation,
-            ),
+            media: buildMediaSet('Стандартная установка розетки', MEDIA_GALLERIES.outletInstall),
             estimatedTime: '1 час',
             maxTimeIncluded: 1.5,
           },
         ],
       },
       {
-        name: 'Диагностика электропроводки',
-        description: 'Комплексная проверка состояния электропроводки и автоматики.',
+        name: 'Монтаж светильника',
+        description: 'Установка потолочных и настенных светильников с проверкой работоспособности.',
         versions: [
           {
             versionNumber: 1,
-            title: 'Первичная диагностика',
+            title: 'Монтаж потолочного светильника',
             description:
-              'Проверка автоматов, розеток и выключателей с предоставлением отчета по состоянию.',
-            isActive: false,
+              'Сборка и подключение светильника с проверкой креплений и электрических соединений.',
             whatsIncluded: [
-              'Визуальный осмотр электрощита',
-              'Проверка автоматических выключателей',
-              'Контроль напряжения в розетках и выключателях',
-              'Краткий письменный отчет о состоянии сети',
+              'Диагностика существующей точки подключения',
+              'Монтаж крепежной пластины',
+              'Подключение проводов согласно схеме',
+              'Проверка работоспособности и балансировки',
             ],
             whatsNotIncluded: [
-              'Замена неисправных элементов',
-              'Тепловизионная съемка',
-              'Скрытая проверка проводки в стенах',
+              'Прокладка новой электролинии',
+              'Монтаж подвесных потолков или каркаса',
+              'Поставка светильника и ламп',
             ],
-            unitOfMeasure: 'объект',
+            unitOfMeasure: 'шт',
             requiredTools: [
-              'Мультиметр',
-              'Индикатор фазы',
-              'Отвертки и шестигранники',
+              'Индикатор напряжения',
+              'Отвертки и клеммники',
+              'Перфоратор и дюбеля',
             ],
             customerRequirements: [
-              'Свободный доступ к электрощиту',
-              'Согласование отключения питания при необходимости',
-              'Предоставление плана объекта при наличии',
+              'Подготовить рабочую площадку и стремянку',
+              'Предоставить собранный светильник',
+              'Обеспечить отключение электричества',
             ],
-            media: buildMediaSet('Первичная диагностика электропроводки', MEDIA_GALLERIES.wiringDiagnostics),
-            estimatedTime: '2 часа',
+            media: buildMediaSet('Монтаж потолочного светильника', MEDIA_GALLERIES.lightFixture),
+            estimatedTime: '1.5 часа',
             maxTimeIncluded: 2,
-          },
-          {
-            versionNumber: 2,
-            title: 'Расширенная диагностика',
-            description:
-              'Включает тепловизионную съемку и проверку распределительного щита.',
-            whatsIncluded: [
-              'Все работы первичной диагностики',
-              'Тепловизионная съемка распределительных коробок',
-              'Измерение сопротивления изоляции',
-              'Расширенный отчет с рекомендациями по устранению неисправностей',
-            ],
-            whatsNotIncluded: [
-              'Ремонт выявленных неисправностей',
-              'Замена кабелей и автоматов',
-              'Пусконаладочные работы оборудования',
-            ],
-            unitOfMeasure: 'объект',
-            requiredTools: [
-              'Мультиметр и мегаомметр',
-              'Тепловизор',
-              'Измерительные клещи',
-            ],
-            customerRequirements: [
-              'Доступ в распределительные шкафы и скрытые ниши',
-              'Предоставление информации о нагрузках и оборудовании',
-              'Возможность кратковременного отключения линий',
-            ],
-            media: buildMediaSet('Расширенная диагностика электропроводки', MEDIA_GALLERIES.wiringAdvanced),
-            estimatedTime: '3.5 часа',
-            maxTimeIncluded: 4,
           },
         ],
       },
@@ -381,7 +354,7 @@ const categories: SeedCategory[] = [
   },
   {
     name: 'Отделка',
-    description: 'Услуги по ремонту и отделке помещений.',
+    description: 'Отделочные работы и подготовка помещений к сдаче или проживанию.',
     services: [
       {
         name: 'Покраска стен',
@@ -389,20 +362,21 @@ const categories: SeedCategory[] = [
         versions: [
           {
             versionNumber: 1,
-            title: 'Покраска стен в один слой',
-            description: 'Подготовка стен и нанесение одного слоя краски.',
+            title: 'Покраска стен в два слоя',
+            description:
+              'Полный цикл подготовки стен и нанесения двух слоев краски для равномерного покрытия.',
             whatsIncluded: [
               'Легкая шлифовка и обеспыливание поверхности',
-              'Заклейка плинтусов и смежных поверхностей защитной лентой',
               'Грунтование стен',
-              'Нанесение одного слоя краски валиком и кистью',
+              'Нанесение двух слоев краски валиком и кистью',
+              'Финальная проверка качества покрытия',
             ],
             whatsNotIncluded: [
-              'Шпатлевка глубоких неровностей',
+              'Выравнивание стен штукатуркой',
               'Демонтаж старых покрытий',
               'Поставка краски и расходных материалов',
             ],
-            unitOfMeasure: 'кв.м.',
+            unitOfMeasure: 'кв.м',
             requiredTools: [
               'Валики и кисти',
               'Лоток для краски',
@@ -410,11 +384,11 @@ const categories: SeedCategory[] = [
               'Стремянка',
             ],
             customerRequirements: [
-              'Освободить стены от мебели',
-              'Обеспечить сухость и чистоту помещения',
+              'Освободить стены от мебели и декора',
+              'Обеспечить вентиляцию в помещении',
               'Предоставить выбранную краску',
             ],
-            media: buildMediaSet('Покраска стен в один слой', MEDIA_GALLERIES.wallPainting),
+            media: buildMediaSet('Покраска стен в два слоя', MEDIA_GALLERIES.wallPainting),
             estimatedTime: '6 часов',
             maxTimeIncluded: 6,
           },
@@ -426,8 +400,9 @@ const categories: SeedCategory[] = [
         versions: [
           {
             versionNumber: 1,
-            title: 'Базовая укладка плитки',
-            description: 'Подготовка основания, укладка плитки и затирка швов.',
+            title: 'Стандартная укладка плитки',
+            description:
+              'Укладка керамической плитки на подготовленное основание с затиркой и финишной очисткой.',
             whatsIncluded: [
               'Очистка и грунтование основания',
               'Разметка раскладки плитки',
@@ -437,21 +412,21 @@ const categories: SeedCategory[] = [
             whatsNotIncluded: [
               'Выравнивание стен или пола по маякам',
               'Резка сложных фигурных элементов',
-              'Монтаж декоративных профилей',
+              'Поставка плитки и затирки',
             ],
-            unitOfMeasure: 'кв.м.',
+            unitOfMeasure: 'кв.м',
             requiredTools: [
-              'Плиткорез и болгарка',
-              'Крестики или СВП',
+              'Плиткорез',
+              'Нивелир и уровень',
               'Зубчатый шпатель',
-              'Уровень и правило',
+              'Резиновые молотки',
             ],
             customerRequirements: [
-              'Предоставить плитку и расходные материалы',
-              'Обеспечить ровное и прочное основание',
-              'Свободный доступ к рабочей зоне',
+              'Предоставить плитку и расходники',
+              'Обеспечить доступ к воде и электричеству',
+              'Подготовить помещение от лишних предметов',
             ],
-            media: buildMediaSet('Базовая укладка плитки', MEDIA_GALLERIES.tileLaying),
+            media: buildMediaSet('Стандартная укладка плитки', MEDIA_GALLERIES.tileLaying),
             estimatedTime: '8 часов',
             maxTimeIncluded: 8,
           },
@@ -461,61 +436,59 @@ const categories: SeedCategory[] = [
   },
   {
     name: 'Климат',
-    description: 'Обслуживание систем отопления и кондиционирования.',
+    description: 'Монтаж и обслуживание климатической техники и инженерных систем.',
     services: [
       {
         name: 'Установка кондиционера',
-        description: 'Профессиональная установка сплит-систем любой мощности.',
+        description: 'Монтаж сплит-системы с первичным пуско-наладочным обслуживанием.',
         versions: [
-            {
-                versionNumber: 1,
-                title: 'Стандартная установка кондиционера до 3 кВт',
-                description: 'Включает монтаж внутреннего и внешнего блоков, прокладку трассы до 3 метров.',
-                whatsIncluded: [
-                  'Выезд и консультация перед монтажом',
-                  'Установка внутреннего и внешнего блоков на готовые поверхности',
-                  'Прокладка межблочной трассы до 3 метров',
-                  'Вакуумирование системы и пробный запуск',
-                ],
-                whatsNotIncluded: [
-                  'Штробление стен и скрытая укладка трассы',
-                  'Установка внешнего блока выше 2 этажа без автовышки',
-                  'Прокладка отдельной электролинии',
-                ],
-                unitOfMeasure: 'шт',
-                requiredTools: [
-                  'Перфоратор и набор буров',
-                  'Вакуумный насос и манометрический коллектор',
-                  'Трубогиб и развальцовочный набор',
-                  'Анкерные крепления',
-                ],
-                customerRequirements: [
-                  'Подготовить место для внутреннего и внешнего блока',
-                  'Обеспечить доступ к электропитанию 220 В',
-                  'Получить разрешение управляющей компании при необходимости',
-                ],
-                media: buildMediaSet(
-                  'Стандартная установка кондиционера',
-                  MEDIA_GALLERIES.acInstallation,
-                ),
-                estimatedTime: '4 часа',
-                maxTimeIncluded: 4,
-            },
+          {
+            versionNumber: 1,
+            title: 'Установка кондиционера «под ключ»',
+            description:
+              'Монтаж включает установку внутренних и наружных блоков, прокладку трассы и проверку герметичности.',
+            whatsIncluded: [
+              'Разметка и сверление монтажных отверстий',
+              'Установка внутреннего и наружного блоков',
+              'Прокладка фреоновой трассы до 5 метров',
+              'Вакуумирование и запуск системы',
+            ],
+            whatsNotIncluded: [
+              'Штробление капитальных стен более 1 метра',
+              'Вынос строительного мусора',
+              'Поставка кондиционера и дополнительных материалов',
+            ],
+            unitOfMeasure: 'комплект',
+            requiredTools: [
+              'Перфоратор с коронкой',
+              'Вакуумный насос',
+              'Медные трубогибы и расширители',
+            ],
+            customerRequirements: [
+              'Согласовать место установки наружного блока',
+              'Обеспечить доступ к источнику питания',
+              'Предоставить кондиционер и комплектующие',
+            ],
+            media: buildMediaSet('Установка кондиционера «под ключ»', MEDIA_GALLERIES.acInstall),
+            estimatedTime: '5 часов',
+            maxTimeIncluded: 6,
+          },
         ],
       },
       {
         name: 'Чистка кондиционера',
-        description: 'Промывка фильтров и обработка теплообменника.',
+        description: 'Комплексная чистка кондиционера с дезинфекцией и проверкой дренажа.',
         versions: [
           {
             versionNumber: 1,
             title: 'Сезонная чистка кондиционера',
-            description: 'Комплексная чистка внутреннего и наружного блока.',
+            description:
+              'Включает чистку фильтров, теплообменников и проверку дренажной системы.',
             whatsIncluded: [
-              'Осмотр кондиционера и диагностика загрязнений',
-              'Снятие и промывка фильтров',
+              'Демонтаж и промывка фильтров',
               'Чистка теплообменника и дренажной системы',
-              'Дезинфекция испарителя и корпуса',
+              'Антибактериальная обработка испарителя',
+              'Контроль работы после сборки',
             ],
             whatsNotIncluded: [
               'Заправка хладагентом',
@@ -541,12 +514,13 @@ const categories: SeedCategory[] = [
       },
       {
         name: 'Настройка котла',
-        description: 'Настройка параметров и проверка безопасности газового котла.',
+        description: 'Пуско-наладка и настройка параметров работы газового котла.',
         versions: [
           {
             versionNumber: 1,
             title: 'Пуско-наладка котла',
-            description: 'Первичная настройка и проверка работоспособности котла.',
+            description:
+              'Настройка автоматики, проверка безопасности и инструктаж пользователя по эксплуатации котла.',
             whatsIncluded: [
               'Подключение котла к инженерным системам',
               'Проверка герметичности газовых и водяных соединений',
@@ -577,6 +551,86 @@ const categories: SeedCategory[] = [
       },
     ],
   },
+  {
+    name: 'Уборка',
+    description: 'Профессиональные клининговые услуги для квартир и офисов.',
+    services: [
+      {
+        name: 'Генеральная уборка',
+        description: 'Комплексная уборка помещения с удалением стойких загрязнений.',
+        versions: [
+          {
+            versionNumber: 1,
+            title: 'Генеральная уборка квартиры',
+            description:
+              'Команда клинеров проводит полную уборку помещения, включая сантехнику и кухонную технику.',
+            whatsIncluded: [
+              'Сухая и влажная уборка всех поверхностей',
+              'Мойка кухонной техники снаружи',
+              'Чистка санузлов с дезинфекцией',
+              'Сбор и вынос бытового мусора',
+            ],
+            whatsNotIncluded: [
+              'Химчистка мягкой мебели',
+              'Мытье окон на высоте с привлечением альпинистов',
+              'Удаление строительного мусора',
+            ],
+            unitOfMeasure: 'объект',
+            requiredTools: [
+              'Пылесос и пароочиститель',
+              'Профессиональная химия для уборки',
+              'Мопы и салфетки из микрофибры',
+            ],
+            customerRequirements: [
+              'Обеспечить доступ во все комнаты',
+              'Сообщить о деликатных поверхностях',
+              'Согласовать время начала работ',
+            ],
+            media: buildMediaSet('Генеральная уборка квартиры', MEDIA_GALLERIES.deepCleaning),
+            estimatedTime: '7 часов',
+            maxTimeIncluded: 7,
+          },
+        ],
+      },
+      {
+        name: 'Мойка окон',
+        description: 'Профессиональная мойка оконных блоков внутри и снаружи.',
+        versions: [
+          {
+            versionNumber: 1,
+            title: 'Мойка окон и балконных блоков',
+            description:
+              'Очистка стекол, рам и подоконников специальными средствами без разводов.',
+            whatsIncluded: [
+              'Удаление пыли и грязи с рам и откосов',
+              'Мытье стекол внутри и снаружи (до 3 этажа)',
+              'Полировка стекол до блеска',
+              'Очистка подоконников и оконных аксессуаров',
+            ],
+            whatsNotIncluded: [
+              'Работы на высоте с автовышки',
+              'Ремонт и регулировка фурнитуры',
+              'Демонтаж и монтаж оконных блоков',
+            ],
+            unitOfMeasure: 'кв.м',
+            requiredTools: [
+              'Телескопические швабры и сквиджи',
+              'Средства для стекол без разводов',
+              'Микрофибровые салфетки',
+            ],
+            customerRequirements: [
+              'Освободить подоконники и прилегающие поверхности',
+              'Сообщить о сложных или нестандартных конструкциях',
+              'Обеспечить доступ к воде и электричеству',
+            ],
+            media: buildMediaSet('Мойка окон и балконных блоков', MEDIA_GALLERIES.windowWashing),
+            estimatedTime: '4 часа',
+            maxTimeIncluded: 4,
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 const cities: SeedCity[] = [
@@ -584,8 +638,8 @@ const cities: SeedCity[] = [
     name: 'Москва',
     slug: 'moskva',
     range: {
-      lat: [55.55, 55.90],
-      lng: [37.30, 37.80],
+      lat: [55.55, 55.92],
+      lng: [37.30, 37.82],
     },
   },
   {
@@ -608,201 +662,202 @@ const cities: SeedCity[] = [
     name: 'Новосибирск',
     slug: 'novosibirsk',
     range: {
-      lat: [54.90, 55.10],
+      lat: [54.80, 55.10],
       lng: [82.80, 83.20],
+    },
+  },
+  {
+    name: 'Екатеринбург',
+    slug: 'yekaterinburg',
+    range: {
+      lat: [56.75, 56.95],
+      lng: [60.50, 60.80],
+    },
+  },
+  {
+    name: 'Нижний Новгород',
+    slug: 'nizhniy-novgorod',
+    range: {
+      lat: [56.20, 56.40],
+      lng: [43.80, 44.10],
     },
   },
 ];
 
 const providerSeeds: SeedProvider[] = [
   {
-    email: 'moscow-plumber@example.com',
-    displayName: 'Мастер сантехник (Москва)',
-    description: 'Опыт более 10 лет по сантехническим работам в Москве.',
+    email: 'alexey.plumber@seed.local',
+    displayName: 'Алексей Петров',
+    description: 'Сантехник с опытом работы более 12 лет, специализация — монтаж и ремонт оборудования.',
     citySlug: 'moskva',
-    hourlyRate: 1800,
-    services: [
-      {
-        categoryName: 'Сантехника',
-        serviceName: 'Установка смесителя',
-        price: 2500,
-      },
-      {
-        categoryName: 'Сантехника',
-        serviceName: 'Чистка сифона',
-        price: 1500,
-      },
-      {
-        categoryName: 'Климат',
-        serviceName: 'Установка кондиционера',
-        price: 9500,
-      },
-    ],
+    hourlyRate: 1900,
   },
   {
-    email: 'spb-electric@example.com',
-    displayName: 'Электрик на дом (Санкт-Петербург)',
-    description: 'Сертифицированный электрик с гарантийным обслуживанием.',
+    email: 'irina.master@seed.local',
+    displayName: 'Ирина Смирнова',
+    description: 'Мастер по мелкому ремонту и диагностике в Санкт-Петербурге.',
     citySlug: 'sankt-peterburg',
-    hourlyRate: 2200,
-    services: [
-      {
-        categoryName: 'Электрика',
-        serviceName: 'Установка розетки',
-        price: 1800,
-      },
-      {
-        categoryName: 'Электрика',
-        serviceName: 'Диагностика электропроводки',
-        price: 3200,
-      },
-    ],
+    hourlyRate: 2100,
   },
   {
-    email: 'kazan-finishing@example.com',
-    displayName: 'Отделочник (Казань)',
-    description: 'Выполняю отделочные работы под ключ.',
+    email: 'maxim.electric@seed.local',
+    displayName: 'Максим Электриков',
+    description: 'Сертифицированный электрик, работаю с квартирами и частными домами.',
+    citySlug: 'moskva',
+    hourlyRate: 2300,
+  },
+  {
+    email: 'daria.clean@seed.local',
+    displayName: 'Дарья Чистюлина',
+    description: 'Профессиональная команда клинеров для квартир и офисов.',
+    citySlug: 'yekaterinburg',
+    hourlyRate: 1600,
+  },
+  {
+    email: 'sergey.finish@seed.local',
+    displayName: 'Сергей Отделочник',
+    description: 'Отделочные работы любой сложности, включая покраску и плитку.',
     citySlug: 'kazan',
     hourlyRate: 2000,
-    services: [
-      {
-        categoryName: 'Отделка',
-        serviceName: 'Покраска стен',
-        price: 2100,
-      },
-      {
-        categoryName: 'Отделка',
-        serviceName: 'Укладка плитки',
-        price: 4200,
-      },
-    ],
   },
   {
-    email: 'novosibirsk-climate@example.com',
-    displayName: 'Климат-сервис (Новосибирск)',
-    description: 'Обслуживание кондиционеров и котлов в Новосибирске.',
+    email: 'anna.climate@seed.local',
+    displayName: 'Анна Климатова',
+    description: 'Обслуживание кондиционеров и систем вентиляции.',
     citySlug: 'novosibirsk',
-    hourlyRate: 1900,
-    services: [
-      {
-        categoryName: 'Климат',
-        serviceName: 'Чистка кондиционера',
-        price: 2700,
-      },
-      {
-        categoryName: 'Климат',
-        serviceName: 'Настройка котла',
-        price: 3500,
-      },
-    ],
+    hourlyRate: 1850,
+  },
+  {
+    email: 'pavel.window@seed.local',
+    displayName: 'Павел Оконников',
+    description: 'Профессиональная мойка окон и витрин.',
+    citySlug: 'sankt-peterburg',
+    hourlyRate: 1500,
+  },
+  {
+    email: 'olga.decor@seed.local',
+    displayName: 'Ольга Декор',
+    description: 'Дизайнерская покраска и декоративные штукатурки.',
+    citySlug: 'moskva',
+    hourlyRate: 2400,
+  },
+  {
+    email: 'vladimir.fix@seed.local',
+    displayName: 'Владимир Починкин',
+    description: 'Экстренный ремонт протечек и сантехнических аварий.',
+    citySlug: 'nizhniy-novgorod',
+    hourlyRate: 2050,
+  },
+  {
+    email: 'svetlana.clean@seed.local',
+    displayName: 'Светлана Уют',
+    description: 'Генеральная уборка квартир и домов в Казани.',
+    citySlug: 'kazan',
+    hourlyRate: 1550,
+  },
+  {
+    email: 'nikita.ac@seed.local',
+    displayName: 'Никита Морозов',
+    description: 'Монтаж кондиционеров и климатических систем под ключ.',
+    citySlug: 'yekaterinburg',
+    hourlyRate: 2200,
+  },
+  {
+    email: 'elena.tidy@seed.local',
+    displayName: 'Елена Чистова',
+    description: 'Премиальный клининг для офисов и апартаментов.',
+    citySlug: 'moskva',
+    hourlyRate: 2100,
+  },
+  {
+    email: 'roman.handyman@seed.local',
+    displayName: 'Роман Мастерской',
+    description: 'Мастер на все руки: сантехника, электрика, мелкий ремонт.',
+    citySlug: 'novosibirsk',
+    hourlyRate: 1950,
+  },
+  {
+    email: 'maria.light@seed.local',
+    displayName: 'Мария Светлова',
+    description: 'Монтаж светильников и дизайн освещения.',
+    citySlug: 'sankt-peterburg',
+    hourlyRate: 2250,
+  },
+  {
+    email: 'egor.tiles@seed.local',
+    displayName: 'Егор Плиткин',
+    description: 'Профессиональная укладка плитки в ванных и кухнях.',
+    citySlug: 'nizhniy-novgorod',
+    hourlyRate: 2150,
+  },
+  {
+    email: 'ksenia.paint@seed.local',
+    displayName: 'Ксения Цвет',
+    description: 'Покраска стен с художественными элементами.',
+    citySlug: 'moskva',
+    hourlyRate: 2450,
+  },
+  {
+    email: 'ilya.boilers@seed.local',
+    displayName: 'Илья Котлов',
+    description: 'Настройка котлов и пуско-наладочные работы.',
+    citySlug: 'kazan',
+    hourlyRate: 2350,
+  },
+  {
+    email: 'tatiana.fix@seed.local',
+    displayName: 'Татьяна Починка',
+    description: 'Сантехнические работы и профилактика систем водоснабжения.',
+    citySlug: 'novosibirsk',
+    hourlyRate: 1800,
+  },
+  {
+    email: 'gennady.service@seed.local',
+    displayName: 'Геннадий Услугов',
+    description: 'Полный спектр бытовых услуг для квартир и коттеджей.',
+    citySlug: 'yekaterinburg',
+    hourlyRate: 2050,
+  },
+  {
+    email: 'arina.clean@seed.local',
+    displayName: 'Арина Блеск',
+    description: 'Экологичная уборка и уход за домом.',
+    citySlug: 'nizhniy-novgorod',
+    hourlyRate: 1650,
   },
 ];
 
-// Функция `ensureSeedUsers` больше не нужна в старом виде
-
-async function seedCatalog(authorId: string) {
-  for (const categoryData of categories) {
-    const category = await prisma.category.upsert({
-      where: { name: categoryData.name },
-      update: {
-        description: categoryData.description ?? null,
-      },
-      create: {
-        name: categoryData.name,
-        slug: generateSlug(categoryData.name),
-        description: categoryData.description ?? null,
-      },
-    });
-
-    for (const serviceData of categoryData.services) {
-      // KeeperId пока не назначаем, так как не знаем, кто будет хранителем
-      const service = await prisma.serviceTemplate.upsert({
-        where: {
-          categoryId_name: { categoryId: category.id, name: serviceData.name },
-        },
-        update: {
-          description: serviceData.description ?? null,
-        },
-        create: {
-          categoryId: category.id,
-          name: serviceData.name,
-          slug: generateSlug(serviceData.name),
-          description: serviceData.description ?? null,
-          authorId: authorId, // Назначаем автора
-        },
-      });
-
-      const versions = [...serviceData.versions].sort(
-        (a, b) => a.versionNumber - b.versionNumber,
-      );
-      const lastVersionNumber = versions.at(-1)?.versionNumber;
-
-      await prisma.serviceTemplateVersion.updateMany({
-        where: { serviceTemplateId: service.id },
-        data: { isActive: false },
-      });
-
-      for (const versionData of versions) {
-        const isActive =
-          versionData.isActive ?? versionData.versionNumber === lastVersionNumber;
-
-        await prisma.serviceTemplateVersion.upsert({
-          where: {
-            serviceTemplateId_versionNumber: {
-              serviceTemplateId: service.id,
-              versionNumber: versionData.versionNumber,
-            },
-          },
-          update: {
-            title: versionData.title,
-            description: versionData.description,
-            whatsIncluded: versionData.whatsIncluded,
-            whatsNotIncluded: versionData.whatsNotIncluded,
-            unitOfMeasure: versionData.unitOfMeasure,
-            requiredTools: versionData.requiredTools,
-            customerRequirements: versionData.customerRequirements,
-            media:
-              versionData.media ??
-              buildMediaSet(versionData.title, FALLBACK_MEDIA_GALLERY),
-            estimatedTime: versionData.estimatedTime,
-            maxTimeIncluded: versionData.maxTimeIncluded ?? null,
-            isActive,
-          },
-          create: {
-            serviceTemplateId: service.id,
-            versionNumber: versionData.versionNumber,
-            title: versionData.title,
-            description: versionData.description,
-            whatsIncluded: versionData.whatsIncluded,
-            whatsNotIncluded: versionData.whatsNotIncluded,
-            unitOfMeasure: versionData.unitOfMeasure,
-            requiredTools: versionData.requiredTools,
-            customerRequirements: versionData.customerRequirements,
-            media:
-              versionData.media ??
-              buildMediaSet(versionData.title, FALLBACK_MEDIA_GALLERY),
-            estimatedTime: versionData.estimatedTime,
-            maxTimeIncluded: versionData.maxTimeIncluded ?? null,
-            isActive,
-          },
-        });
-      }
-    }
-  }
-}
+const customerSeeds: SeedCustomer[] = [
+  { email: 'customer.one@seed.local', fullName: 'Иван Клиент' },
+  { email: 'customer.two@seed.local', fullName: 'Мария Заказчик' },
+  { email: 'customer.three@seed.local', fullName: 'Петр Покупатель' },
+  { email: 'customer.four@seed.local', fullName: 'Анна Пользователь' },
+  { email: 'customer.five@seed.local', fullName: 'Светлана Клиентка' },
+];
 
 function randomInRange([min, max]: [number, number]): number {
   return Math.random() * (max - min) + min;
 }
 
+function getRandomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function shuffleArray<T>(items: T[]): T[] {
+  for (let i = items.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+
+function pickRandomSubset<T>(items: T[], desiredCount: number): T[] {
+  const shuffled = shuffleArray([...items]);
+  return shuffled.slice(0, Math.min(desiredCount, shuffled.length));
+}
+
 async function seedCities() {
-  const cityMap: Record<
-    string,
-    {
-      id: string;
-      range: CoordinateRange;
-    }
-  > = {};
+  const cityMap: Record<string, { id: string; range: CoordinateRange }> = {};
 
   for (const cityData of cities) {
     const city = await prisma.city.upsert({
@@ -823,6 +878,103 @@ async function seedCities() {
   return cityMap;
 }
 
+async function seedCatalog(authorId: string): Promise<ActiveServiceVersion[]> {
+  const activeVersions: ActiveServiceVersion[] = [];
+
+  for (const categoryData of categories) {
+    const category = await prisma.category.upsert({
+      where: { name: categoryData.name },
+      update: {
+        description: categoryData.description ?? null,
+      },
+      create: {
+        name: categoryData.name,
+        slug: generateSlug(categoryData.name),
+        description: categoryData.description ?? null,
+      },
+    });
+
+    for (const serviceData of categoryData.services) {
+      const serviceTemplate = await prisma.serviceTemplate.upsert({
+        where: {
+          categoryId_name: { categoryId: category.id, name: serviceData.name },
+        },
+        update: {
+          description: serviceData.description ?? null,
+        },
+        create: {
+          categoryId: category.id,
+          name: serviceData.name,
+          slug: generateSlug(serviceData.name),
+          description: serviceData.description ?? null,
+          authorId: authorId,
+        },
+      });
+
+      await prisma.serviceTemplateVersion.updateMany({
+        where: { serviceTemplateId: serviceTemplate.id },
+        data: { isActive: false },
+      });
+
+      const versions = [...serviceData.versions].sort(
+        (a, b) => a.versionNumber - b.versionNumber,
+      );
+
+      for (const versionData of versions) {
+        const version = await prisma.serviceTemplateVersion.upsert({
+          where: {
+            serviceTemplateId_versionNumber: {
+              serviceTemplateId: serviceTemplate.id,
+              versionNumber: versionData.versionNumber,
+            },
+          },
+          update: {
+            title: versionData.title,
+            description: versionData.description,
+            whatsIncluded: versionData.whatsIncluded,
+            whatsNotIncluded: versionData.whatsNotIncluded,
+            unitOfMeasure: versionData.unitOfMeasure,
+            requiredTools: versionData.requiredTools,
+            customerRequirements: versionData.customerRequirements,
+            estimatedTime: versionData.estimatedTime,
+            maxTimeIncluded: versionData.maxTimeIncluded ?? null,
+            media:
+              versionData.media ??
+              buildMediaSet(versionData.title, FALLBACK_MEDIA_GALLERY),
+            isActive: true,
+          },
+          create: {
+            serviceTemplateId: serviceTemplate.id,
+            versionNumber: versionData.versionNumber,
+            title: versionData.title,
+            description: versionData.description,
+            whatsIncluded: versionData.whatsIncluded,
+            whatsNotIncluded: versionData.whatsNotIncluded,
+            unitOfMeasure: versionData.unitOfMeasure,
+            requiredTools: versionData.requiredTools,
+            customerRequirements: versionData.customerRequirements,
+            estimatedTime: versionData.estimatedTime,
+            maxTimeIncluded: versionData.maxTimeIncluded ?? null,
+            media:
+              versionData.media ??
+              buildMediaSet(versionData.title, FALLBACK_MEDIA_GALLERY),
+            isActive: true,
+          },
+        });
+
+        activeVersions.push({
+          id: version.id,
+          serviceName: serviceData.name,
+          categoryName: categoryData.name,
+          title: version.title,
+        });
+      }
+    }
+  }
+
+  return activeVersions;
+}
+
 async function setProviderHomeLocation(
   providerProfileId: string,
   longitude: number,
@@ -840,22 +992,30 @@ async function setProviderHomeLocation(
 
 async function seedProviders(
   cityMap: Record<string, { id: string; range: CoordinateRange }>,
+  activeVersions: ActiveServiceVersion[],
 ) {
-  for (const providerData of providerSeeds) {
+  const providerCountWithPrices = Math.round(
+    providerSeeds.length * PRICES_PER_PROVIDER_RATIO,
+  );
+  const providerIndices = shuffleArray(
+    Array.from({ length: providerSeeds.length }, (_, index) => index),
+  );
+  const pricedProviders = new Set(
+    providerIndices.slice(0, providerCountWithPrices),
+  );
+
+  for (const [index, providerData] of providerSeeds.entries()) {
     const city = cityMap[providerData.citySlug];
 
     if (!city) {
       continue;
     }
 
-    const hourlyRateData =
-      providerData.hourlyRate !== undefined
-        ? { hourlyRate: new Prisma.Decimal(providerData.hourlyRate) }
-        : {};
-
     const user = await prisma.user.upsert({
       where: { email: providerData.email },
-      update: {},
+      update: {
+        role: Role.PROVIDER,
+      },
       create: {
         email: providerData.email,
         passwordHash: 'seeded-hash',
@@ -867,16 +1027,16 @@ async function seedProviders(
       where: { userId: user.id },
       update: {
         displayName: providerData.displayName,
-        description: providerData.description ?? null,
+        description: providerData.description,
         cityId: city.id,
-        ...hourlyRateData,
+        hourlyRate: new Prisma.Decimal(providerData.hourlyRate),
       },
       create: {
         userId: user.id,
         displayName: providerData.displayName,
-        description: providerData.description ?? null,
+        description: providerData.description,
         cityId: city.id,
-        ...hourlyRateData,
+        hourlyRate: new Prisma.Decimal(providerData.hourlyRate),
       },
     });
 
@@ -885,44 +1045,37 @@ async function seedProviders(
 
     await setProviderHomeLocation(profile.id, longitude, latitude);
 
-    for (const service of providerData.services) {
-      const serviceTemplate = await prisma.serviceTemplate.findFirst({
-        where: {
-          name: service.serviceName,
-          category: { name: service.categoryName },
-        },
-        include: {
-          versions: {
-            where: { isActive: true },
-            orderBy: { versionNumber: 'desc' },
-            take: 1,
-          },
-        },
-      });
+    await prisma.price.deleteMany({ where: { providerProfileId: profile.id } });
 
-      const version = serviceTemplate?.versions.at(0);
+    if (!pricedProviders.has(index)) {
+      continue;
+    }
 
-      if (!version) {
-        continue;
-      }
+    const priceCount = getRandomInt(
+      SERVICES_PER_PROVIDER_MIN,
+      SERVICES_PER_PROVIDER_MAX,
+    );
+    const servicesToPrice = pickRandomSubset(activeVersions, priceCount);
 
+    for (const serviceVersion of servicesToPrice) {
+      const basePrice = getRandomInt(1500, 9000);
       const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
 
       await prisma.price.upsert({
         where: {
           providerProfileId_serviceTemplateVersionId: {
             providerProfileId: profile.id,
-            serviceTemplateVersionId: version.id,
+            serviceTemplateVersionId: serviceVersion.id,
           },
         },
         update: {
-          price: new Prisma.Decimal(service.price),
+          price: new Prisma.Decimal(basePrice),
           expiresAt,
         },
         create: {
           providerProfileId: profile.id,
-          serviceTemplateVersionId: version.id,
-          price: new Prisma.Decimal(service.price),
+          serviceTemplateVersionId: serviceVersion.id,
+          price: new Prisma.Decimal(basePrice),
           expiresAt,
         },
       });
@@ -930,31 +1083,55 @@ async function seedProviders(
   }
 }
 
+async function seedCustomers() {
+  for (const customer of customerSeeds) {
+    const user = await prisma.user.upsert({
+      where: { email: customer.email },
+      update: {
+        role: Role.CUSTOMER,
+      },
+      create: {
+        email: customer.email,
+        passwordHash: 'seeded-hash',
+        role: Role.CUSTOMER,
+      },
+    });
+
+    await prisma.customerProfile.upsert({
+      where: { userId: user.id },
+      update: {
+        fullName: customer.fullName,
+      },
+      create: {
+        userId: user.id,
+        fullName: customer.fullName,
+      },
+    });
+  }
+}
+
 async function main() {
   await prisma.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS postgis;`);
-  console.log(`PostGIS extension ensured.`);
+  console.log('PostGIS extension ensured.');
   console.log('Starting seed...');
 
-  // 1. Создаем тестового пользователя-автора
   const author = await prisma.user.upsert({
     where: { email: 'catalog-author@example.com' },
-    update: {},
+    update: {
+      role: Role.PROVIDER,
+    },
     create: {
       email: 'catalog-author@example.com',
       passwordHash: 'seeded-hash',
-      role: Role.PROVIDER, // Авторы могут быть и исполнителями
+      role: Role.PROVIDER,
     },
   });
 
-  // 2. Создаем города
   const cityMap = await seedCities();
-  
-  // 3. Создаем каталог, передавая ID автора
-  await seedCatalog(author.id);
-  
-  // 4. Создаем исполнителей и их цены
-  await seedProviders(cityMap);
-  
+  const activeVersions = await seedCatalog(author.id);
+  await seedProviders(cityMap, activeVersions);
+  await seedCustomers();
+
   console.log('Seed finished.');
 }
 
@@ -963,6 +1140,15 @@ main()
     await prisma.$disconnect();
   })
   .catch(async (e) => {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2021') {
+      console.error(
+        'Prisma сообщает, что таблица отсутствует (ошибка P2021). '
+          + 'Сначала нужно применить все миграции: \n'
+          + '  pnpm prisma migrate deploy\n'
+          + 'После успешного применения миграций запустите сидер ещё раз.'
+      );
+    }
+
     console.error('An error occurred during seeding:', e);
     await prisma.$disconnect();
     process.exit(1);
